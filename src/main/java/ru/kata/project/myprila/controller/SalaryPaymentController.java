@@ -1,8 +1,10 @@
-package ru.kata.project.myprila;
+package ru.kata.project.myprila.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.kata.project.myprila.entity.SalaryPayment;
+import ru.kata.project.myprila.service.WorkDayService;
 
 import java.math.BigDecimal;
 import java.util.List;

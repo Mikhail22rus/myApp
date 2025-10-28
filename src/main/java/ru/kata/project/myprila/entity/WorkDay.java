@@ -1,4 +1,4 @@
-package ru.kata.project.myprila;
+package ru.kata.project.myprila.entity;
 
 
 import jakarta.persistence.*;

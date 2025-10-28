@@ -1,7 +1,11 @@
-package ru.kata.project.myprila;
+package ru.kata.project.myprila.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.kata.project.myprila.entity.SalaryPayment;
+import ru.kata.project.myprila.entity.WorkDay;
+import ru.kata.project.myprila.repo.SalaryPaymentRepository;
+import ru.kata.project.myprila.repo.WorkDayReposytory;
 
 import java.math.BigDecimal;
 import java.util.List;

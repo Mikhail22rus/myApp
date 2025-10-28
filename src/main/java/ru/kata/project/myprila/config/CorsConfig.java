@@ -1,4 +1,4 @@
-package ru.kata.project.myprila;
+package ru.kata.project.myprila.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

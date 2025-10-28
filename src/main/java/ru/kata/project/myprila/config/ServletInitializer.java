@@ -1,4 +1,4 @@
-package ru.kata.project.myprila;
+package ru.kata.project.myprila.config;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
