@@ -1,8 +1,6 @@
 package ru.kata.project.myprila.entity;
 
-
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 
 @Entity
@@ -13,29 +11,27 @@ public class WorkDay {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "work_date", nullable = false, unique = true)
+    @Column(name = "work_date", nullable = false)
     private LocalDate workDate;
 
     @Column(name = "description", length = 500)
     private String description;
 
-    @Column(name = "salary", nullable = false)
-    private Integer salary = 3500;
+    // ✅ ИЗМЕНЕНО: salary больше не фиксированная, можно редактировать
+    @Column(name = "salary")
+    private Integer salary;
 
-    // Фиксированная ставка 3500 руб/день
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-
     // Конструкторы
-    public WorkDay() {
-    }
+    public WorkDay() {}
 
     public WorkDay(LocalDate workDate, String description) {
         this.workDate = workDate;
         this.description = description;
-        this.salary = 3500;
+        this.salary = 3500; // значение по умолчанию, но можно изменить
     }
 
     public WorkDay(LocalDate workDate, String description, Integer salary) {
@@ -44,42 +40,21 @@ public class WorkDay {
         this.salary = salary;
     }
 
-    public void setUser(User user) {
-        this.user = user;
-    }
-
     // Геттеры и сеттеры
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public LocalDate getWorkDate() { return workDate; }
+    public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }
 
-    public LocalDate getWorkDate() {
-        return workDate;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setWorkDate(LocalDate workDate) {
-        this.workDate = workDate;
-    }
+    public Integer getSalary() { return salary; }
+    public void setSalary(Integer salary) { this.salary = salary; }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Integer getSalary() {
-        return salary;
-    }
-
-    public void setSalary(Integer salary) {
-        this.salary = salary;
-    }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 
     @Override
     public String toString() {
@@ -88,6 +63,7 @@ public class WorkDay {
                 ", workDate=" + workDate +
                 ", description='" + description + '\'' +
                 ", salary=" + salary +
+                ", userId=" + (user != null ? user.getId() : "null") +
                 '}';
     }
 }
