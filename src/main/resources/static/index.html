@@ -597,7 +597,6 @@
     // Элементы DOM
     const loginForm = document.getElementById('loginForm');
     const mainContent = document.getElementById('mainContent');
-    const loginFormElement = document.getElementById('loginFormElement');
     const currentUserNameSpan = document.getElementById('currentUserName');
     const workdayForm = document.getElementById('workdayForm');
     const salaryPaymentForm = document.getElementById('salaryPaymentForm');
@@ -613,7 +612,51 @@
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    // Функции
+    // Простой вход
+    function quickLogin() {
+        const userSelect = document.getElementById('userSelect');
+        if (!userSelect.value) {
+            showMessage('Выберите пользователя', 'error');
+            return;
+        }
+
+        currentUser = JSON.parse(userSelect.value);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        showMainContent();
+        showMessage(`Добро пожаловать, ${currentUser.username}!`);
+    }
+
+    function logout() {
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        showLoginForm();
+        showMessage('Вы вышли из системы');
+    }
+
+    function showMainContent() {
+        loginForm.style.display = 'none';
+        mainContent.style.display = 'block';
+        currentUserNameSpan.textContent = currentUser.username;
+        loadWorkdays();
+        loadPayments();
+        updateSummary();
+    }
+
+    function showLoginForm() {
+        loginForm.style.display = 'block';
+        mainContent.style.display = 'none';
+        document.getElementById('userSelect').value = '';
+    }
+
+    function checkAuth() {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            showMainContent();
+        }
+    }
+
+    // Вспомогательные функции
     function showMessage(text, type = 'success') {
         messageDiv.textContent = text;
         messageDiv.className = `message ${type}`;
@@ -642,63 +685,6 @@
         if (typeof value === 'number') return value;
         const num = parseFloat(value);
         return isNaN(num) ? 0 : num;
-    }
-
-    // Авторизация
-    async function login(username, password) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                currentUser = result;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                showMainContent();
-                showMessage(`Добро пожаловать, ${username}!`);
-                return true;
-            } else {
-                showMessage(result.message || 'Ошибка входа', 'error');
-                return false;
-            }
-        } catch (error) {
-            showMessage('Ошибка соединения', 'error');
-            return false;
-        }
-    }
-
-    function logout() {
-        currentUser = null;
-        localStorage.removeItem('currentUser');
-        showLoginForm();
-        showMessage('Вы вышли из системы');
-    }
-
-    function showMainContent() {
-        loginForm.style.display = 'none';
-        mainContent.style.display = 'block';
-        currentUserNameSpan.textContent = currentUser.username;
-        loadWorkdays();
-        loadPayments();
-        updateSummary();
-    }
-
-    function showLoginForm() {
-        loginForm.style.display = 'block';
-        mainContent.style.display = 'none';
-        loginFormElement.reset();
-    }
-
-    function checkAuth() {
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            showMainContent();
-        }
     }
 
     // API функции
@@ -919,12 +905,6 @@
     }
 
     // Обработчики событий
-    loginFormElement.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(loginFormElement);
-        await login(formData.get('username'), formData.get('password'));
-    });
-
     workdayForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(workdayForm);
@@ -967,6 +947,7 @@
     window.deleteWorkday = deleteWorkday;
     window.deletePayment = deletePayment;
     window.logout = logout;
+    window.quickLogin = quickLogin;
 </script>
 </body>
 </html>
