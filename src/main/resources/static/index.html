@@ -476,16 +476,35 @@
 <div class="container">
     <!-- Форма входа -->
     <div id="loginForm" class="login-form">
-        <h3>🔐 Выберите пользователя</h3>
-        <div class="form-group">
-            <label>Выберите пользователя для входа:</label>
-            <select id="userSelect" class="form-control">
-                <option value="">-- Выберите пользователя --</option>
-                <option value='{"userId": 1, "username": "user1"}'>👤 user1</option>
-                <option value='{"userId": 2, "username": "user2"}'>👤 user2</option>
-            </select>
+        <h3>🔐 Вход в систему</h3>
+        <form id="loginFormElement">
+            <div class="form-group">
+                <label for="username">Пользователь:</label>
+                <select id="username" name="username" required class="form-control">
+                    <option value="">-- Выберите пользователя --</option>
+                    <option value="Миша">👤 Миша</option>
+                    <option value="Игорь">👤 Игорь</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="password">Пароль:</label>
+                <input type="password" id="password" name="password" required
+                       class="form-control" placeholder="Введите пароль">
+                <small style="color: #666; font-size: 12px;">
+                    Миша: пароль123 | Игорь: igor2024
+                </small>
+            </div>
+            <button type="submit" class="btn btn-success">Войти</button>
+        </form>
+
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <button onclick="createUsers()" class="btn btn-info" style="font-size: 12px; padding: 8px 12px;">
+                🔧 Создать пользователей
+            </button>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Нажмите если пользователи не найдены
+            </small>
         </div>
-        <button onclick="quickLogin()" class="btn btn-success">Войти</button>
     </div>
 
     <!-- Основной контент -->
@@ -597,6 +616,7 @@
     // Элементы DOM
     const loginForm = document.getElementById('loginForm');
     const mainContent = document.getElementById('mainContent');
+    const loginFormElement = document.getElementById('loginFormElement');
     const currentUserNameSpan = document.getElementById('currentUserName');
     const workdayForm = document.getElementById('workdayForm');
     const salaryPaymentForm = document.getElementById('salaryPaymentForm');
@@ -612,18 +632,44 @@
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    // Простой вход
-    function quickLogin() {
-        const userSelect = document.getElementById('userSelect');
-        if (!userSelect.value) {
-            showMessage('Выберите пользователя', 'error');
-            return;
-        }
+    // Авторизация
+    async function login(username, password) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
 
-        currentUser = JSON.parse(userSelect.value);
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        showMainContent();
-        showMessage(`Добро пожаловать, ${currentUser.username}!`);
+            const result = await response.json();
+
+            if (result.success) {
+                currentUser = result;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showMainContent();
+                showMessage(`Добро пожаловать, ${username}!`);
+                return true;
+            } else {
+                showMessage(result.message || 'Ошибка входа', 'error');
+                return false;
+            }
+        } catch (error) {
+            showMessage('Ошибка соединения с сервером', 'error');
+            return false;
+        }
+    }
+
+    // Создание пользователей
+    async function createUsers() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/create-users`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+            showMessage(result.message);
+        } catch (error) {
+            showMessage('Ошибка создания пользователей', 'error');
+        }
     }
 
     function logout() {
@@ -645,7 +691,7 @@
     function showLoginForm() {
         loginForm.style.display = 'block';
         mainContent.style.display = 'none';
-        document.getElementById('userSelect').value = '';
+        loginFormElement.reset();
     }
 
     function checkAuth() {
@@ -905,6 +951,12 @@
     }
 
     // Обработчики событий
+    loginFormElement.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(loginFormElement);
+        await login(formData.get('username'), formData.get('password'));
+    });
+
     workdayForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(workdayForm);
@@ -947,7 +999,7 @@
     window.deleteWorkday = deleteWorkday;
     window.deletePayment = deletePayment;
     window.logout = logout;
-    window.quickLogin = quickLogin;
+    window.createUsers = createUsers;
 </script>
 </body>
 </html>
