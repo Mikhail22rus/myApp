@@ -1,4 +1,4 @@
-package ru.kata.project.myprila.config;
+package ru.kata.project.myprila;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
