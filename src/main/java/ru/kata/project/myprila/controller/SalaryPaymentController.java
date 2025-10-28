@@ -11,18 +11,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/payments")
-
 public class SalaryPaymentController {
 
     @Autowired
     private WorkDayService workDayService;
 
-    // Получить все выплаты
+    // ✅ Получить выплаты ПОЛЬЗОВАТЕЛЯ
     @GetMapping
-    public ResponseEntity<List<SalaryPayment>> getAllPayments() {
+    public ResponseEntity<List<SalaryPayment>> getUserPayments(@RequestParam Long userId) {
         try {
-            System.out.println("💰 GET /api/payments - запрос всех выплат");
-            List<SalaryPayment> payments = workDayService.getAllSalaryPayments();
+            System.out.println("💰 GET /api/payments - запрос выплат пользователя ID: " + userId);
+            List<SalaryPayment> payments = workDayService.getUserSalaryPayments(userId);
             System.out.println("✅ Найдено выплат: " + payments.size());
             return ResponseEntity.ok(payments);
         } catch (Exception e) {
@@ -31,11 +30,11 @@ public class SalaryPaymentController {
         }
     }
 
-    // Добавить новую выплату
+    // ✅ Добавить выплату ДЛЯ ПОЛЬЗОВАТЕЛЯ
     @PostMapping
-    public ResponseEntity<?> addPayment(@RequestBody PaymentRequest request) {
+    public ResponseEntity<?> addPayment(@RequestBody PaymentRequest request, @RequestParam Long userId) {
         try {
-            System.out.println("💰 POST /api/payments - добавление выплаты: " + request.getAmount());
+            System.out.println("💰 POST /api/payments - добавление выплаты для пользователя ID: " + userId + ", сумма: " + request.getAmount());
 
             // Валидация
             if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -44,55 +43,66 @@ public class SalaryPaymentController {
 
             SalaryPayment payment = workDayService.addSalaryPayment(
                     request.getAmount(),
-                    request.getDescription()
+                    request.getDescription(),
+                    userId
             );
 
             // Получаем обновленную статистику
-            BigDecimal balance = workDayService.getSalaryBalance();
+            BigDecimal balance = workDayService.getSalaryBalance(userId);
             System.out.println("✅ Выплата добавлена. Остаток долга: " + balance);
 
             PaymentResponse response = new PaymentResponse(payment, balance);
             return ResponseEntity.ok(response);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             System.out.println("❌ Ошибка при добавлении выплаты: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new ErrorResponse("Ошибка при добавлении выплаты"));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("❌ Неизвестная ошибка при добавлении выплаты: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Внутренняя ошибка сервера"));
         }
     }
 
-    // Удалить выплату
+    // ✅ Удалить выплату ПОЛЬЗОВАТЕЛЯ
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePayment(@PathVariable Long id) {
+    public ResponseEntity<?> deletePayment(@PathVariable Long id, @RequestParam Long userId) {
         try {
-            System.out.println("💰 DELETE /api/payments/" + id + " - удаление выплаты");
+            System.out.println("💰 DELETE /api/payments/" + id + " - удаление выплаты для пользователя ID: " + userId);
 
-            workDayService.deleteSalaryPayment(id);
+            workDayService.deleteSalaryPayment(id, userId);
 
             // Получаем обновленную статистику после удаления
-            BigDecimal balance = workDayService.getSalaryBalance();
+            BigDecimal balance = workDayService.getSalaryBalance(userId);
             System.out.println("✅ Выплата удалена. Остаток долга: " + balance);
 
             return ResponseEntity.ok().build();
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             System.out.println("❌ Ошибка при удалении выплаты: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new ErrorResponse("Ошибка при удалении выплаты"));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("❌ Неизвестная ошибка при удалении выплаты: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Внутренняя ошибка сервера"));
         }
     }
 
-    // Получить статистику по выплатам
+    // ✅ Получить статистику по выплатам ПОЛЬЗОВАТЕЛЯ
     @GetMapping("/statistics")
-    public ResponseEntity<PaymentStatistics> getPaymentStatistics() {
+    public ResponseEntity<PaymentStatistics> getPaymentStatistics(@RequestParam Long userId) {
         try {
-            System.out.println("💰 GET /api/payments/statistics - запрос статистики выплат");
+            System.out.println("💰 GET /api/payments/statistics - запрос статистики выплат пользователя ID: " + userId);
 
-            BigDecimal totalEarned = workDayService.getTotalEarned();
-            BigDecimal totalPaid = workDayService.getTotalPaid();
-            BigDecimal balance = workDayService.getSalaryBalance();
-            int totalPayments = workDayService.getAllSalaryPayments().size();
+            WorkDayService.WorkDayStatistics statistics = workDayService.getStatistics(userId);
+            List<SalaryPayment> payments = workDayService.getUserSalaryPayments(userId);
 
-            PaymentStatistics statistics = new PaymentStatistics(totalEarned, totalPaid, balance, totalPayments);
-            return ResponseEntity.ok(statistics);
+            PaymentStatistics paymentStats = new PaymentStatistics(
+                    statistics.getTotalEarned(),
+                    statistics.getTotalPaid(),
+                    statistics.getSalaryBalance(),
+                    payments.size()
+            );
+
+            return ResponseEntity.ok(paymentStats);
 
         } catch (Exception e) {
             System.out.println("❌ Ошибка при получении статистики выплат: " + e.getMessage());
@@ -100,7 +110,20 @@ public class SalaryPaymentController {
         }
     }
 
-    // Тестовый endpoint
+    // ✅ Получить баланс ПОЛЬЗОВАТЕЛЯ
+    @GetMapping("/balance")
+    public ResponseEntity<BigDecimal> getSalaryBalance(@RequestParam Long userId) {
+        try {
+            System.out.println("💰 GET /api/payments/balance - запрос баланса пользователя ID: " + userId);
+            BigDecimal balance = workDayService.getSalaryBalance(userId);
+            return ResponseEntity.ok(balance);
+        } catch (Exception e) {
+            System.out.println("❌ Ошибка при получении баланса: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ✅ Тестовый endpoint
     @GetMapping("/test")
     public ResponseEntity<String> test() {
         System.out.println("✅ SalaryPaymentController тестовый endpoint вызван");
