@@ -2,6 +2,7 @@ package ru.kata.project.myprila.entity;
 
 
 import jakarta.persistence.*;
+
 import java.time.LocalDate;
 
 @Entity
@@ -19,17 +20,17 @@ public class WorkDay {
     private String description;
 
     @Column(name = "salary", nullable = false)
-    private Integer salary = 3500; // Фиксированная ставка 3500 руб/день
+    private Integer salary = 3500;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
+    // Фиксированная ставка 3500 руб/день
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+
+
     // Конструкторы
-    public WorkDay() {}
+    public WorkDay() {
+    }
 
     public WorkDay(LocalDate workDate, String description) {
         this.workDate = workDate;
@@ -46,18 +47,39 @@ public class WorkDay {
     public void setUser(User user) {
         this.user = user;
     }
+
     // Геттеры и сеттеры
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public LocalDate getWorkDate() { return workDate; }
-    public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public LocalDate getWorkDate() {
+        return workDate;
+    }
 
-    public Integer getSalary() { return salary; }
-    public void setSalary(Integer salary) { this.salary = salary; }
+    public void setWorkDate(LocalDate workDate) {
+        this.workDate = workDate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Integer getSalary() {
+        return salary;
+    }
+
+    public void setSalary(Integer salary) {
+        this.salary = salary;
+    }
 
     @Override
     public String toString() {
