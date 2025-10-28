@@ -6,22 +6,22 @@ import org.springframework.web.bind.annotation.*;
 import ru.kata.project.myprila.entity.WorkDay;
 import ru.kata.project.myprila.service.WorkDayService;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/workdays")
-
 public class WorkDayController {
 
     @Autowired
     private WorkDayService workDayService;
 
-    // Получить все рабочие дни
+    // ✅ Получить рабочие дни ПОЛЬЗОВАТЕЛЯ
     @GetMapping
-    public ResponseEntity<List<WorkDay>> getAllWorkDays() {
+    public ResponseEntity<List<WorkDay>> getUserWorkDays(@RequestParam Long userId) {
         try {
-            System.out.println("📥 GET /api/workdays - запрос всех рабочих дней");
-            List<WorkDay> workDays = workDayService.getAllWorkDays();
+            System.out.println("📥 GET /api/workdays - запрос рабочих дней пользователя ID: " + userId);
+            List<WorkDay> workDays = workDayService.getUserWorkDays(userId);
             System.out.println("✅ Найдено рабочих дней: " + workDays.size());
             return ResponseEntity.ok(workDays);
         } catch (Exception e) {
@@ -30,13 +30,13 @@ public class WorkDayController {
         }
     }
 
-    // Добавить новый рабочий день
+    // ✅ Добавить новый рабочий день ДЛЯ ПОЛЬЗОВАТЕЛЯ
     @PostMapping
-    public ResponseEntity<?> createWorkDay(@RequestBody WorkDay workDay) {
+    public ResponseEntity<?> createWorkDay(@RequestBody WorkDay workDay, @RequestParam Long userId) {
         try {
-            System.out.println("📥 POST /api/workdays - создание дня: " + workDay.getWorkDate());
+            System.out.println("📥 POST /api/workdays - создание дня для пользователя ID: " + userId + ", дата: " + workDay.getWorkDate());
 
-            WorkDay savedWorkDay = workDayService.saveWorkDay(workDay);
+            WorkDay savedWorkDay = workDayService.createWorkDay(workDay, userId);
             return ResponseEntity.ok(savedWorkDay);
 
         } catch (RuntimeException e) {
@@ -48,13 +48,31 @@ public class WorkDayController {
         }
     }
 
-    // Удалить рабочий день
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteWorkDay(@PathVariable Long id) {
+    // ✅ Обновить рабочий день
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateWorkDay(@PathVariable Long id, @RequestBody WorkDay workDay, @RequestParam Long userId) {
         try {
-            System.out.println("📥 DELETE /api/workdays/" + id + " - удаление дня");
+            System.out.println("📥 PUT /api/workdays/" + id + " - обновление дня для пользователя ID: " + userId);
 
-            workDayService.deleteWorkDay(id);
+            WorkDay updatedWorkDay = workDayService.updateWorkDay(id, workDay, userId);
+            return ResponseEntity.ok(updatedWorkDay);
+
+        } catch (RuntimeException e) {
+            System.out.println("❌ Ошибка при обновлении рабочего дня: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("❌ Неизвестная ошибка: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Внутренняя ошибка сервера"));
+        }
+    }
+
+    // ✅ Удалить рабочий день ПОЛЬЗОВАТЕЛЯ
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteWorkDay(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            System.out.println("📥 DELETE /api/workdays/" + id + " - удаление дня для пользователя ID: " + userId);
+
+            workDayService.deleteWorkDay(id, userId);
             return ResponseEntity.ok().build();
 
         } catch (RuntimeException e) {
@@ -66,12 +84,12 @@ public class WorkDayController {
         }
     }
 
-    // Получить статистику
+    // ✅ Получить статистику ПОЛЬЗОВАТЕЛЯ
     @GetMapping("/statistics")
-    public ResponseEntity<WorkDayService.WorkDayStatistics> getStatistics() {
+    public ResponseEntity<WorkDayService.WorkDayStatistics> getStatistics(@RequestParam Long userId) {
         try {
-            System.out.println("📊 GET /api/workdays/statistics - запрос статистики");
-            WorkDayService.WorkDayStatistics statistics = workDayService.getStatistics();
+            System.out.println("📊 GET /api/workdays/statistics - запрос статистики пользователя ID: " + userId);
+            WorkDayService.WorkDayStatistics statistics = workDayService.getStatistics(userId);
             return ResponseEntity.ok(statistics);
         } catch (Exception e) {
             System.out.println("❌ Ошибка при получении статистики: " + e.getMessage());
@@ -79,11 +97,37 @@ public class WorkDayController {
         }
     }
 
-    // Тестовый endpoint
+    // ✅ Получить баланс ПОЛЬЗОВАТЕЛЯ
+    @GetMapping("/balance")
+    public ResponseEntity<BigDecimal> getSalaryBalance(@RequestParam Long userId) {
+        try {
+            System.out.println("💰 GET /api/workdays/balance - запрос баланса пользователя ID: " + userId);
+            BigDecimal balance = workDayService.getSalaryBalance(userId);
+            return ResponseEntity.ok(balance);
+        } catch (Exception e) {
+            System.out.println("❌ Ошибка при получении баланса: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ✅ Тестовый endpoint
     @GetMapping("/test")
     public ResponseEntity<String> test() {
         System.out.println("✅ Тестовый endpoint вызван");
         return ResponseEntity.ok("Бэкенд для учета рабочих дней работает! 🚀");
+    }
+
+    // ✅ Проверка состояния сервиса
+    @GetMapping("/status")
+    public ResponseEntity<String> getServiceStatus(@RequestParam Long userId) {
+        try {
+            System.out.println("🔧 GET /api/workdays/status - проверка состояния для пользователя ID: " + userId);
+            String status = workDayService.getServiceStatus(userId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            System.out.println("❌ Ошибка при проверке состояния: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Ошибка сервиса: " + e.getMessage());
+        }
     }
 
     // Класс для ошибок
