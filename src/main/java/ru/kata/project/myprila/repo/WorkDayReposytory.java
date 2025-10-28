@@ -23,4 +23,12 @@ public interface WorkDayReposytory extends JpaRepository<WorkDay, Long> {
 
     // Получить дни за определенный период
     List<WorkDay> findByWorkDateBetween(LocalDate startDate, LocalDate endDate);
+    List<WorkDay> findByUserIdOrderByWorkDateDesc(Long userId);
+    List<WorkDay> findByUserId(Long userId);
+    boolean existsByWorkDateAndUserId(LocalDate workDate, Long userId);
+    Optional<WorkDay> findByIdAndUserId(Long id, Long userId);
+    long countByUserId(Long userId);
+
+    // SalaryPaymentRepository
+
 }

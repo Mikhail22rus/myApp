@@ -21,6 +21,13 @@ public class WorkDay {
     @Column(name = "salary", nullable = false)
     private Integer salary = 3500; // Фиксированная ставка 3500 руб/день
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
     // Конструкторы
     public WorkDay() {}
 
@@ -36,6 +43,9 @@ public class WorkDay {
         this.salary = salary;
     }
 
+    public void setUser(User user) {
+        this.user = user;
+    }
     // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

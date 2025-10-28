@@ -6,13 +6,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.kata.project.myprila.entity.SalaryPayment;
+import ru.kata.project.myprila.entity.User;
 import ru.kata.project.myprila.entity.WorkDay;
 import ru.kata.project.myprila.repo.SalaryPaymentRepository;
+import ru.kata.project.myprila.repo.UserRepository;
 import ru.kata.project.myprila.repo.WorkDayReposytory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,249 +24,324 @@ public class WorkDayService {
     private static final Logger logger = LoggerFactory.getLogger(WorkDayService.class);
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private SalaryPaymentRepository salaryPaymentRepository;
 
     @Autowired
     private WorkDayReposytory workDayRepository;
 
-    // Получить все рабочие дни
-    public List<WorkDay> getAllWorkDays() {
-        logger.info("📥 Получение всех рабочих дней");
+    // ========== РАБОЧИЕ ДНИ ==========
+
+    /**
+     * Получить все рабочие дни пользователя
+     */
+    public List<WorkDay> getUserWorkDays(Long userId) {
+        logger.info("📥 Получение рабочих дней для пользователя ID: {}", userId);
         try {
-            List<WorkDay> workDays = workDayRepository.findAllByOrderByWorkDateDesc();
-            logger.info("✅ Найдено {} рабочих дней", workDays.size());
+            validateUserExists(userId);
+            List<WorkDay> workDays = workDayRepository.findByUserIdOrderByWorkDateDesc(userId);
+            logger.info("✅ Найдено {} рабочих дней для пользователя ID: {}", workDays.size(), userId);
             return workDays;
         } catch (Exception e) {
-            logger.error("❌ Ошибка при получении рабочих дней: {}", e.getMessage(), e);
-            throw new RuntimeException("Ошибка получения данных: " + e.getMessage(), e);
+            logger.error("❌ Ошибка при получении рабочих дней для пользователя ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Ошибка получения рабочих дней: " + e.getMessage(), e);
         }
     }
 
-    // Получить рабочий день по ID
-    public Optional<WorkDay> getWorkDayById(Long id) {
-        logger.info("📥 Получение рабочего дня по ID: {}", id);
+    /**
+     * Получить рабочий день по ID с проверкой принадлежности пользователю
+     */
+    public Optional<WorkDay> getUserWorkDayById(Long workDayId, Long userId) {
+        logger.info("📥 Получение рабочего дня ID: {} для пользователя ID: {}", workDayId, userId);
         try {
-            Optional<WorkDay> workDay = workDayRepository.findById(id);
+            validateUserExists(userId);
+            Optional<WorkDay> workDay = workDayRepository.findByIdAndUserId(workDayId, userId);
             if (workDay.isPresent()) {
                 logger.info("✅ Найден рабочий день: {}", workDay.get());
             } else {
-                logger.warn("⚠️ Рабочий день с ID {} не найден", id);
+                logger.warn("⚠️ Рабочий день с ID {} не найден для пользователя ID {}", workDayId, userId);
             }
             return workDay;
         } catch (Exception e) {
-            logger.error("❌ Ошибка при поиске рабочего дня по ID {}: {}", id, e.getMessage(), e);
-            throw new RuntimeException("Ошибка поиска: " + e.getMessage(), e);
+            logger.error("❌ Ошибка при поиске рабочего дня ID {} для пользователя ID {}: {}", workDayId, userId, e.getMessage(), e);
+            throw new RuntimeException("Ошибка поиска рабочего дня: " + e.getMessage(), e);
         }
     }
 
-    // Сохранить рабочий день
-    public WorkDay saveWorkDay(WorkDay workDay) {
-        logger.info("🔄 Начало сохранения WorkDay: {}", workDay.getWorkDate());
+    /**
+     * Создать новый рабочий день для пользователя
+     */
+    public WorkDay createWorkDay(WorkDay workDay, Long userId) {
+        logger.info("🔄 Создание рабочего дня для пользователя ID: {}, дата: {}", userId, workDay.getWorkDate());
 
         try {
-            // Валидация входных данных
-            if (workDay.getWorkDate() == null) {
-                String error = "Дата рабочего дня не может быть пустой";
-                logger.error("❌ {}", error);
-                throw new RuntimeException(error);
-            }
+            User user = validateUserExists(userId);
 
-            if (workDay.getWorkDate().isAfter(LocalDate.now())) {
-                logger.warn("⚠️ Создается рабочий день в будущем: {}", workDay.getWorkDate());
-            }
+            // Валидация данных
+            validateWorkDayData(workDay);
 
-            // Проверяем, нет ли уже дня с такой датой
-            logger.info("📋 Проверка существования записи на дату: {}", workDay.getWorkDate());
-            boolean exists = workDayRepository.existsByWorkDate(workDay.getWorkDate());
-            logger.info("📋 Результат проверки: {}", exists);
-
-            if (exists) {
+            // Проверяем, нет ли уже дня с такой датой у этого пользователя
+            if (workDayRepository.existsByWorkDateAndUserId(workDay.getWorkDate(), userId)) {
                 String error = "Рабочий день на дату " + workDay.getWorkDate() + " уже существует";
                 logger.error("❌ {}", error);
                 throw new RuntimeException(error);
             }
 
-            // Устанавливаем фиксированную зарплату 3500 рублей, если не установлена
+            // Устанавливаем пользователя и зарплату по умолчанию
+            workDay.setUser(user);
             if (workDay.getSalary() == null || workDay.getSalary() == 0) {
                 workDay.setSalary(3500);
                 logger.info("💰 Установлена зарплата по умолчанию: {}", workDay.getSalary());
-            } else {
-                logger.info("💰 Использована переданная зарплата: {}", workDay.getSalary());
             }
 
             // Сохраняем
-            logger.info("💾 Вызов workDayRepository.save()");
-            WorkDay saved = workDayRepository.save(workDay);
-            logger.info("✅ Успешно сохранен WorkDay с ID: {}, Дата: {}, Зарплата: {}",
-                    saved.getId(), saved.getWorkDate(), saved.getSalary());
+            WorkDay savedWorkDay = workDayRepository.save(workDay);
+            logger.info("✅ Успешно создан рабочий день ID: {} для пользователя ID: {}", savedWorkDay.getId(), userId);
 
-            // Проверяем, что запись действительно сохранилась
-            boolean existsAfterSave = workDayRepository.existsById(saved.getId());
-            logger.info("🔍 Проверка существования после сохранения: {}", existsAfterSave);
+            return savedWorkDay;
 
-            if (!existsAfterSave) {
-                logger.error("🚨 ЗАПИСЬ НЕ СОХРАНИЛАСЬ В БАЗЕ! ID: {}", saved.getId());
-                throw new RuntimeException("Запись не сохранилась в базе данных");
-            }
-
-            return saved;
-
-        } catch (RuntimeException e) {
-            // Перебрасываем бизнес-ошибки как есть
-            throw e;
-        } catch (Exception e) {
-            logger.error("🚨 КРИТИЧЕСКАЯ ОШИБКА при сохранении WorkDay:", e);
-            throw new RuntimeException("Ошибка сохранения в базе данных: " + e.getMessage(), e);
-        }
-    }
-
-    // Удалить рабочий день
-    public void deleteWorkDay(Long id) {
-        logger.info("🗑️ Попытка удаления рабочего дня с ID: {}", id);
-
-        try {
-            boolean exists = workDayRepository.existsById(id);
-            logger.info("📋 Запись с ID {} существует: {}", id, exists);
-
-            if (exists) {
-                workDayRepository.deleteById(id);
-                logger.info("✅ Успешно удален рабочий день с ID: {}", id);
-
-                // Проверяем, что запись действительно удалилась
-                boolean existsAfterDelete = workDayRepository.existsById(id);
-                if (existsAfterDelete) {
-                    logger.error("🚨 ЗАПИСЬ НЕ УДАЛИЛАСЬ! ID: {}", id);
-                    throw new RuntimeException("Запись не удалилась из базы данных");
-                }
-            } else {
-                String error = "Рабочий день с ID " + id + " не найден";
-                logger.error("❌ {}", error);
-                throw new RuntimeException(error);
-            }
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
-            logger.error("🚨 Ошибка при удалении рабочего дня с ID {}: {}", id, e.getMessage(), e);
-            throw new RuntimeException("Ошибка удаления: " + e.getMessage(), e);
+            logger.error("🚨 Ошибка при создании рабочего дня для пользователя ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Ошибка создания рабочего дня: " + e.getMessage(), e);
         }
     }
 
-    // 📊 МЕТОДЫ ДЛЯ УЧЕТА ЗАРПЛАТЫ
-
-    public SalaryPayment addSalaryPayment(BigDecimal amount, String description) {
-        logger.info("💰 Добавление выплаты: {}, {}", amount, description);
+    /**
+     * Обновить рабочий день (только свои данные)
+     */
+    public WorkDay updateWorkDay(Long workDayId, WorkDay workDayUpdates, Long userId) {
+        logger.info("🔄 Обновление рабочего дня ID: {} для пользователя ID: {}", workDayId, userId);
 
         try {
+            validateUserExists(userId);
+
+            // Находим существующий рабочий день
+            WorkDay existingWorkDay = workDayRepository.findByIdAndUserId(workDayId, userId)
+                    .orElseThrow(() -> new RuntimeException("Рабочий день не найден"));
+
+            // Обновляем поля (кроме даты и пользователя)
+            if (workDayUpdates.getDescription() != null) {
+                existingWorkDay.setDescription(workDayUpdates.getDescription());
+            }
+            if (workDayUpdates.getSalary() != null && workDayUpdates.getSalary() > 0) {
+                existingWorkDay.setSalary(workDayUpdates.getSalary());
+            }
+
+            WorkDay updatedWorkDay = workDayRepository.save(existingWorkDay);
+            logger.info("✅ Успешно обновлен рабочий день ID: {}", workDayId);
+
+            return updatedWorkDay;
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("🚨 Ошибка при обновлении рабочего дня ID {} для пользователя ID {}: {}", workDayId, userId, e.getMessage(), e);
+            throw new RuntimeException("Ошибка обновления рабочего дня: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Удалить рабочий день пользователя
+     */
+    public void deleteWorkDay(Long workDayId, Long userId) {
+        logger.info("🗑️ Удаление рабочего дня ID: {} для пользователя ID: {}", workDayId, userId);
+
+        try {
+            validateUserExists(userId);
+
+            WorkDay workDay = workDayRepository.findByIdAndUserId(workDayId, userId)
+                    .orElseThrow(() -> new RuntimeException("Рабочий день не найден"));
+
+            workDayRepository.delete(workDay);
+            logger.info("✅ Успешно удален рабочий день ID: {} для пользователя ID: {}", workDayId, userId);
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("🚨 Ошибка при удалении рабочего дня ID {} для пользователя ID {}: {}", workDayId, userId, e.getMessage(), e);
+            throw new RuntimeException("Ошибка удаления рабочего дня: " + e.getMessage(), e);
+        }
+    }
+
+    // ========== ВЫПЛАТЫ ЗАРПЛАТЫ ==========
+
+    /**
+     * Добавить выплату зарплаты для пользователя
+     */
+    public SalaryPayment addSalaryPayment(BigDecimal amount, String description, Long userId) {
+        logger.info("💰 Добавление выплаты для пользователя ID: {}, сумма: {}, описание: {}", userId, amount, description);
+
+        try {
+            User user = validateUserExists(userId);
+
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("Сумма выплаты должна быть положительной");
             }
 
-            SalaryPayment payment = new SalaryPayment(amount, description);
-            SalaryPayment saved = salaryPaymentRepository.save(payment);
-            logger.info("✅ Успешно сохранена выплата с ID: {}", saved.getId());
-            return saved;
+            SalaryPayment payment = new SalaryPayment(amount, description, user);
+            SalaryPayment savedPayment = salaryPaymentRepository.save(payment);
+            logger.info("✅ Успешно сохранена выплата ID: {} для пользователя ID: {}", savedPayment.getId(), userId);
+
+            return savedPayment;
+
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("❌ Ошибка при добавлении выплаты: {}", e.getMessage(), e);
+            logger.error("❌ Ошибка при добавлении выплаты для пользователя ID {}: {}", userId, e.getMessage(), e);
             throw new RuntimeException("Ошибка сохранения выплаты: " + e.getMessage(), e);
         }
     }
 
-    public List<SalaryPayment> getAllSalaryPayments() {
-        logger.info("📥 Получение всех выплат");
+    /**
+     * Получить все выплаты пользователя
+     */
+    public List<SalaryPayment> getUserSalaryPayments(Long userId) {
+        logger.info("📥 Получение выплат для пользователя ID: {}", userId);
+
         try {
-            List<SalaryPayment> payments = salaryPaymentRepository.findAllByOrderByPaymentDateDesc();
-            logger.info("✅ Найдено {} выплат", payments.size());
+            validateUserExists(userId);
+            List<SalaryPayment> payments = salaryPaymentRepository.findByUserIdOrderByPaymentDateDesc(userId);
+            logger.info("✅ Найдено {} выплат для пользователя ID: {}", payments.size(), userId);
             return payments;
         } catch (Exception e) {
-            logger.error("❌ Ошибка при получении выплат: {}", e.getMessage(), e);
+            logger.error("❌ Ошибка при получении выплат для пользователя ID {}: {}", userId, e.getMessage(), e);
             throw new RuntimeException("Ошибка получения выплат: " + e.getMessage(), e);
         }
     }
 
-    public void deleteSalaryPayment(Long id) {
-        logger.info("🗑️ Удаление выплаты с ID: {}", id);
+    /**
+     * Удалить выплату пользователя
+     */
+    public void deleteSalaryPayment(Long paymentId, Long userId) {
+        logger.info("🗑️ Удаление выплаты ID: {} для пользователя ID: {}", paymentId, userId);
+
         try {
-            if (salaryPaymentRepository.existsById(id)) {
-                salaryPaymentRepository.deleteById(id);
-                logger.info("✅ Успешно удалена выплата с ID: {}", id);
-            } else {
-                throw new RuntimeException("Выплата с ID " + id + " не найдена");
-            }
+            validateUserExists(userId);
+
+            SalaryPayment payment = salaryPaymentRepository.findByIdAndUserId(paymentId, userId)
+                    .orElseThrow(() -> new RuntimeException("Выплата не найдена"));
+
+            salaryPaymentRepository.delete(payment);
+            logger.info("✅ Успешно удалена выплата ID: {} для пользователя ID: {}", paymentId, userId);
+
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("❌ Ошибка при удалении выплаты: {}", e.getMessage(), e);
+            logger.error("❌ Ошибка при удалении выплаты ID {} для пользователя ID {}: {}", paymentId, userId, e.getMessage(), e);
             throw new RuntimeException("Ошибка удаления выплаты: " + e.getMessage(), e);
         }
     }
 
-    // Расчет общей суммы заработанного
-    public BigDecimal getTotalEarned() {
-        logger.debug("🧮 Расчет общего заработка");
-        try {
-            List<WorkDay> workDays = workDayRepository.findAll();
-            BigDecimal total = workDays.stream()
-                    .map(workDay -> BigDecimal.valueOf(workDay.getSalary()))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            logger.debug("💰 Общий заработок: {}", total);
-            return total;
-        } catch (Exception e) {
-            logger.error("❌ Ошибка при расчете общего заработка: {}", e.getMessage(), e);
-            return BigDecimal.ZERO;
-        }
-    }
+    // ========== СТАТИСТИКА И ФИНАНСЫ ==========
 
-    // Расчет общей суммы выплат
-    public BigDecimal getTotalPaid() {
-        logger.debug("🧮 Расчет общих выплат");
-        try {
-            List<SalaryPayment> payments = salaryPaymentRepository.findAll();
-            BigDecimal total = payments.stream()
-                    .map(SalaryPayment::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            logger.debug("💰 Общие выплаты: {}", total);
-            return total;
-        } catch (Exception e) {
-            logger.error("❌ Ошибка при расчете общих выплат: {}", e.getMessage(), e);
-            return BigDecimal.ZERO;
-        }
-    }
+    /**
+     * Получить полную статистику пользователя
+     */
+    public WorkDayStatistics getStatistics(Long userId) {
+        logger.info("📊 Получение статистики для пользователя ID: {}", userId);
 
-    // Расчет остатка (долг работодателя)
-    public BigDecimal getSalaryBalance() {
-        logger.debug("🧮 Расчет баланса зарплаты");
         try {
-            BigDecimal totalEarned = getTotalEarned();
-            BigDecimal totalPaid = getTotalPaid();
-            BigDecimal balance = totalEarned.subtract(totalPaid);
-            logger.debug("💰 Баланс зарплаты: {} (заработано: {}, выплачено: {})",
-                    balance, totalEarned, totalPaid);
-            return balance;
-        } catch (Exception e) {
-            logger.error("❌ Ошибка при расчете баланса зарплаты: {}", e.getMessage(), e);
-            return BigDecimal.ZERO;
-        }
-    }
+            validateUserExists(userId);
 
-    // 📈 ОБНОВЛЕННАЯ СТАТИСТИКА (объединенная версия)
-    public WorkDayStatistics getStatistics() {
-        logger.info("📊 Получение статистики");
-        try {
-            List<WorkDay> allDays = workDayRepository.findAll();
-            int totalDays = allDays.size();
-            BigDecimal totalEarned = getTotalEarned();
-            BigDecimal totalPaid = getTotalPaid();
-            BigDecimal salaryBalance = getSalaryBalance();
+            List<WorkDay> userDays = workDayRepository.findByUserId(userId);
+            List<SalaryPayment> userPayments = salaryPaymentRepository.findByUserId(userId);
 
-            logger.info("📊 Статистика: дней={}, заработано={}, выплачено={}, баланс={}",
-                    totalDays, totalEarned, totalPaid, salaryBalance);
+            int totalDays = userDays.size();
+            BigDecimal totalEarned = calculateTotalEarned(userDays);
+            BigDecimal totalPaid = calculateTotalPaid(userPayments);
+            BigDecimal salaryBalance = totalEarned.subtract(totalPaid);
+
+            logger.info("📊 Статистика для пользователя ID {}: дней={}, заработано={}, выплачено={}, баланс={}",
+                    userId, totalDays, totalEarned, totalPaid, salaryBalance);
 
             return new WorkDayStatistics(totalDays, totalEarned, totalPaid, salaryBalance);
+
         } catch (Exception e) {
-            logger.error("❌ Ошибка при получении статистики: {}", e.getMessage(), e);
+            logger.error("❌ Ошибка при получении статистики для пользователя ID {}: {}", userId, e.getMessage(), e);
             throw new RuntimeException("Ошибка получения статистики: " + e.getMessage(), e);
         }
     }
 
-    // 📊 ЕДИНЫЙ КЛАСС СТАТИСТИКИ (исправленный)
+    /**
+     * Получить финансовый баланс пользователя
+     */
+    public BigDecimal getSalaryBalance(Long userId) {
+        logger.debug("🧮 Расчет баланса для пользователя ID: {}", userId);
+
+        try {
+            validateUserExists(userId);
+
+            WorkDayStatistics stats = getStatistics(userId);
+            return stats.getSalaryBalance();
+
+        } catch (Exception e) {
+            logger.error("❌ Ошибка при расчете баланса для пользователя ID {}: {}", userId, e.getMessage(), e);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
+
+    /**
+     * Проверить существование пользователя
+     */
+    private User validateUserExists(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Пользователь с ID " + userId + " не найден"));
+    }
+
+    /**
+     * Валидация данных рабочего дня
+     */
+    private void validateWorkDayData(WorkDay workDay) {
+        if (workDay.getWorkDate() == null) {
+            throw new RuntimeException("Дата рабочего дня не может быть пустой");
+        }
+
+        if (workDay.getWorkDate().isAfter(LocalDate.now())) {
+            logger.warn("⚠️ Создается рабочий день в будущем: {}", workDay.getWorkDate());
+        }
+    }
+
+    /**
+     * Расчет общего заработка
+     */
+    private BigDecimal calculateTotalEarned(List<WorkDay> workDays) {
+        return workDays.stream()
+                .map(day -> BigDecimal.valueOf(day.getSalary()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Расчет общих выплат
+     */
+    private BigDecimal calculateTotalPaid(List<SalaryPayment> payments) {
+        return payments.stream()
+                .map(SalaryPayment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Проверка состояния сервиса
+     */
+    public String getServiceStatus(Long userId) {
+        try {
+            validateUserExists(userId);
+            long workDayCount = workDayRepository.countByUserId(userId);
+            long salaryPaymentCount = salaryPaymentRepository.countByUserId(userId);
+            return String.format("✅ Сервис работает. Пользователь ID: %d, WorkDays: %d, Payments: %d",
+                    userId, workDayCount, salaryPaymentCount);
+        } catch (Exception e) {
+            return "❌ Ошибка сервиса: " + e.getMessage();
+        }
+    }
+
+    // ========== КЛАСС СТАТИСТИКИ ==========
+
     public static class WorkDayStatistics {
         private final int totalDays;
         private final BigDecimal totalEarned;
@@ -285,24 +361,5 @@ public class WorkDayService {
         public BigDecimal getTotalEarned() { return totalEarned; }
         public BigDecimal getTotalPaid() { return totalPaid; }
         public BigDecimal getSalaryBalance() { return salaryBalance; }
-    }
-
-    // 📍 ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ДИАГНОСТИКИ
-
-    public String getServiceStatus() {
-        try {
-            long workDayCount = workDayRepository.count();
-            long salaryPaymentCount = salaryPaymentRepository.count();
-            return String.format("✅ Сервис работает. WorkDays: %d, SalaryPayments: %d",
-                    workDayCount, salaryPaymentCount);
-        } catch (Exception e) {
-            return "❌ Ошибка сервиса: " + e.getMessage();
-        }
-    }
-
-    public WorkDay createTestWorkDay() {
-        LocalDate testDate = LocalDate.now().plusYears(1); // Уникальная дата
-        WorkDay testDay = new WorkDay(testDate, "Тестовая запись из сервиса");
-        return saveWorkDay(testDay);
     }
 }

@@ -18,15 +18,19 @@ public class SalaryPayment {
     private LocalDateTime paymentDate;
 
     private String description;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     // Конструкторы
     public SalaryPayment() {
     }
 
-    public SalaryPayment(BigDecimal amount, String description) {
+    public SalaryPayment(BigDecimal amount, String description,User user) {
         this.amount = amount;
         this.description = description;
         this.paymentDate = LocalDateTime.now();
+        this.user = user;
     }
 
     // Геттеры и сеттеры
