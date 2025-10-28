@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учет рабочих дней и зарплаты</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .summary-card h2 {
+            margin-bottom: 15px;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+        }
+
+        .summary-numbers {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .summary-item {
+            padding: 10px;
+        }
+
+        .summary-value {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: bold;
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+
+        .summary-label {
+            font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+            opacity: 0.9;
+        }
+
+        .balance-positive {
+            color: #00ff00 !important;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+            font-weight: bold;
+        }
+
+        .balance-negative {
+            color: #ff0000 !important;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+            font-weight: bold;
+        }
+
+        .forms-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .add-day-form, .salary-payment-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .add-day-form h3, .salary-payment-form h3 {
+            margin-bottom: 15px;
+            font-size: clamp(1.1rem, 3vw, 1.3rem);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffd93d 0%, #ff9a3d 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .workdays-list, .payments-list {
+            margin-top: 20px;
+        }
+
+        .workdays-container, .payments-container {
+            margin-top: 15px;
+        }
+
+        .workday-card, .payment-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .workday-card {
+            border-left: 4px solid #667eea;
+        }
+
+        .payment-card {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .workday-info, .payment-info {
+            flex-grow: 1;
+            margin-bottom: 10px;
+        }
+
+        .workday-date, .payment-date {
+            font-weight: 600;
+            font-size: clamp(1rem, 3vw, 1.1rem);
+            margin-bottom: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .workday-description, .payment-description {
+            color: #666;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            line-height: 1.4;
+        }
+
+        .workday-actions, .payment-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .workday-salary, .payment-amount {
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+            white-space: nowrap;
+        }
+
+        .workday-salary {
+            background: #4CAF50;
+        }
+
+        .payment-amount {
+            background: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: clamp(1rem, 3vw, 1.1rem);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+
+        .empty-state div:first-child {
+            font-size: clamp(2rem, 8vw, 3rem);
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
+        }
+
+        .empty-state p {
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e1e5e9;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+            flex-shrink: 0;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Стили для группировки по месяцам */
+        .month-group {
+            margin-bottom: 25px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            overflow: hidden;
+            background: white;
+        }
+        
+        .month-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .month-total {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .month-days {
+            background: white;
+        }
+        
+        .month-days .workday-card {
+            margin-bottom: 0;
+            border-radius: 0;
+            border-left: none;
+            border-bottom: 1px solid #e1e5e9;
+        }
+        
+        .month-days .workday-card:last-child {
+            border-bottom: none;
+        }
+
+        /* Планшеты и маленькие ноутбуки */
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            
+            .container {
+                padding: 30px;
+            }
+            
+            .summary-numbers {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px;
+            }
+            
+            .summary-item {
+                padding: 15px;
+            }
+            
+            .forms-row {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            
+            .btn {
+                width: auto;
+            }
+            
+            .workday-card, .payment-card {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .workday-info, .payment-info {
+                margin-bottom: 0;
+            }
+            
+            .workday-actions, .payment-actions {
+                justify-content: flex-start;
+            }
+            
+            .workday-date, .payment-date {
+                flex-wrap: nowrap;
+            }
+        }
+
+        /* Большие экраны */
+        @media (min-width: 1024px) {
+            .container {
+                padding: 40px;
+            }
+            
+            .forms-row {
+                gap: 30px;
+            }
+        }
+
+        /* Очень маленькие экраны */
+        @media (max-width: 360px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                padding: 15px;
+                border-radius: 10px;
+            }
+            
+            .summary-card,
+            .add-day-form,
+            .salary-payment-form {
+                padding: 15px;
+            }
+            
+            .workday-card, .payment-card {
+                padding: 12px;
+            }
+            
+            .tab {
+                padding: 10px 12px;
+            }
+        }
+
+        /* Улучшение для очень высоких элементов на мобильных */
+        @media (max-height: 700px) and (max-width: 768px) {
+            .summary-card {
+                padding: 15px;
+            }
+            
+            .summary-item {
+                padding: 8px;
+            }
+            
+            .forms-row {
+                gap: 12px;
+            }
+            
+            .add-day-form, .salary-payment-form {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Учет зарплаты и рабочих дней</h1>
+        
+        <!-- Сводная информация -->
+        <div class="summary-card">
+            <h2>📊 Финансовая сводка</h2>
+            <div class="summary-numbers">
+                <div class="summary-item">
+                    <div class="summary-value" id="totalDays">0</div>
+                    <div class="summary-label">Отработано дней</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="totalEarned">0 ₽</div>
+                    <div class="summary-label">Всего заработано</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="totalPaid">0 ₽</div>
+                    <div class="summary-label">Получено выплат</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="salaryBalance">0 ₽</div>
+                    <div class="summary-label">Остаток (долг)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Формы в ряд -->
+        <div class="forms-row">
+            <!-- Форма добавления рабочего дня -->
+            <div class="add-day-form">
+                <h3>➕ Добавить рабочий день</h3>
+                <form id="workdayForm">
+                    <div class="form-group">
+                        <label for="workDate">Дата работы:</label>
+                        <input type="date" id="workDate" name="workDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Описание работы:</label>
+                        <textarea id="description" name="description" rows="2" placeholder="Что делали в этот день..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">💾 Сохранить день (+3 500 ₽)</button>
+                </form>
+            </div>
+
+            <!-- Форма получения зарплаты -->
+            <div class="salary-payment-form">
+                <h3>💵 Получил зарплату</h3>
+                <form id="salaryPaymentForm">
+                    <div class="form-group">
+                        <label for="paymentDate">Дата получения:</label>
+                        <input type="date" id="paymentDate" name="paymentDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount">Сумма полученных денег:</label>
+                        <input type="number" id="amount" name="amount" min="1" required placeholder="Введите сумму в рублях">
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentDescription">Описание выплаты:</label>
+                        <input type="text" id="paymentDescription" name="paymentDescription" placeholder="Аванс, зарплата, премия...">
+                    </div>
+                    <button type="submit" class="btn btn-warning">💳 Зафиксировать выплату</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Сообщения -->
+        <div id="message" class="message"></div>
+
+        <!-- Табы для переключения между списками -->
+        <div class="tabs">
+            <div class="tab active" data-tab="workdays">📅 Рабочие дни</div>
+            <div class="tab" data-tab="payments">💵 Выплаты зарплаты</div>
+        </div>
+
+        <!-- Контент табов -->
+        <div class="tab-content active" id="workdaysTab">
+            <div class="workdays-list">
+                <button id="loadWorkdays" class="btn btn-info">🔄 Обновить список дней</button>
+                <div id="workdaysContainer" class="workdays-container">
+                    <div class="loading">Загрузка рабочих дней...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="paymentsTab">
+            <div class="payments-list">
+                <button id="loadPayments" class="btn btn-info">🔄 Обновить список выплат</button>
+                <div id="paymentsContainer" class="payments-container">
+                    <div class="loading">Загрузка выплат...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация
+        const API_BASE_URL = 'http://localhost:8082/api';
+        const DAILY_RATE = 3500; // 3500 рублей в день
+
+        // Элементы DOM
+        const workdayForm = document.getElementById('workdayForm');
+        const salaryPaymentForm = document.getElementById('salaryPaymentForm');
+        const messageDiv = document.getElementById('message');
+        const loadWorkdaysBtn = document.getElementById('loadWorkdays');
+        const loadPaymentsBtn = document.getElementById('loadPayments');
+        const workdaysContainer = document.getElementById('workdaysContainer');
+        const paymentsContainer = document.getElementById('paymentsContainer');
+        const totalDaysSpan = document.getElementById('totalDays');
+        const totalEarnedSpan = document.getElementById('totalEarned');
+        const totalPaidSpan = document.getElementById('totalPaid');
+        const salaryBalanceSpan = document.getElementById('salaryBalance');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Показать сообщение
+        function showMessage(text, type = 'success') {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            
+            setTimeout(() => {
+                messageDiv.className = 'message';
+            }, 5000);
+        }
+
+        // Форматирование даты
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Безопасное форматирование суммы денег
+        function formatMoney(amount) {
+            try {
+                // Преобразуем в число, если это строка
+                let num = amount;
+                if (typeof amount === 'string') {
+                    num = parseFloat(amount);
+                }
+                
+                // Проверяем, что это валидное число
+                if (isNaN(num) || num === null || num === undefined) {
+                    return '0 ₽';
+                }
+                
+                return new Intl.NumberFormat('ru-RU').format(num) + ' ₽';
+            } catch (error) {
+                console.error('Ошибка форматирования суммы:', error);
+                return '0 ₽';
+            }
+        }
+
+        // Безопасное преобразование в число
+        function safeNumber(value) {
+            if (value === null || value === undefined) return 0;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                const num = parseFloat(value);
+                return isNaN(num) ? 0 : num;
+            }
+            return 0;
+        }
+
+        // Функция для группировки дней по месяцам
+        function groupWorkdaysByMonth(workdays) {
+            const groups = {};
+            const monthNames = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+            
+            workdays.forEach(workday => {
+                const date = new Date(workday.workDate);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const key = `${year}-${month}`;
+                
+                if (!groups[key]) {
+                    groups[key] = {
+                        monthName: `${monthNames[month]} ${year}`,
+                        days: [],
+                        total: 0,
+                        daysCount: 0
+                    };
+                }
+                
+                groups[key].days.push(workday);
+                groups[key].total += workday.salary;
+                groups[key].daysCount += 1;
+            });
+            
+            return groups;
+        }
+
+        // Обновить сводную информацию
+        async function updateSummary() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/workdays/statistics`);
+                if (response.ok) {
+                    const stats = await response.json();
+                    console.log('Получена статистика:', stats);
+                    
+                    // Безопасное извлечение значений
+                    const totalDays = safeNumber(stats.totalDays);
+                    const totalEarned = safeNumber(stats.totalEarned);
+                    const totalPaid = safeNumber(stats.totalPaid);
+                    const balance = safeNumber(stats.salaryBalance);
+                    
+                    totalDaysSpan.textContent = totalDays;
+                    totalEarnedSpan.textContent = formatMoney(totalEarned);
+                    totalPaidSpan.textContent = formatMoney(totalPaid);
+                    salaryBalanceSpan.textContent = formatMoney(balance);
+                    
+                    // Цвет остатка
+                    if (balance > 0) {
+                        salaryBalanceSpan.className = 'summary-value balance-positive';
+                    } else if (balance < 0) {
+                        salaryBalanceSpan.className = 'summary-value balance-negative';
+                    } else {
+                        salaryBalanceSpan.className = 'summary-value';
+                    }
+                } else {
+                    console.error('Ошибка HTTP:', response.status);
+                    showMessage('Ошибка при загрузке статистики', 'error');
+                    
+                    // Установим значения по умолчанию при ошибке
+                    totalDaysSpan.textContent = '0';
+                    totalEarnedSpan.textContent = '0 ₽';
+                    totalPaidSpan.textContent = '0 ₽';
+                    salaryBalanceSpan.textContent = '0 ₽';
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке статистики:', error);
+                showMessage('Ошибка соединения с сервером', 'error');
+                
+                // Установим значения по умолчанию при ошибке
+                totalDaysSpan.textContent = '0';
+                totalEarnedSpan.textContent = '0 ₽';
+                totalPaidSpan.textContent = '0 ₽';
+                salaryBalanceSpan.textContent = '0 ₽';
+            }
+        }
+
+        // Загрузить все рабочие дни
+        async function loadWorkdays() {
+            try {
+                workdaysContainer.innerHTML = '<div class="loading">Загрузка рабочих дней...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/workdays`);
+                
+                if (response.ok) {
+                    const workdays = await response.json();
+                    console.log('Получены рабочие дни:', workdays);
+                    
+                    if (!workdays || workdays.length === 0) {
+                        workdaysContainer.innerHTML = `
+                            <div class="empty-state">
+                                <div>📭</div>
+                                <h3>Нет рабочих дней</h3>
+                                <p>Добавьте первый рабочий день с помощью формы выше</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Сортируем по дате (новые сверху)
+                    workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+                    
+                    // Группируем по месяцам
+                    const monthGroups = groupWorkdaysByMonth(workdays);
+                    
+                    // Сортируем группы по дате (новые месяцы сверху)
+                    const sortedGroups = Object.entries(monthGroups)
+                        .sort(([keyA], [keyB]) => keyB.localeCompare(keyA));
+                    
+                    workdaysContainer.innerHTML = '';
+                    
+                    if (sortedGroups.length === 0) {
+                        workdaysContainer.innerHTML = `
+                            <div class="empty-state">
+                                <div>📭</div>
+                                <h3>Нет рабочих дней</h3>
+                                <p>Добавьте первый рабочий день с помощью формы выше</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    sortedGroups.forEach(([key, group]) => {
+                        const monthGroup = document.createElement('div');
+                        monthGroup.className = 'month-group';
+                        
+                        monthGroup.innerHTML = `
+                            <div class="month-header">
+                                <span>${group.monthName}</span>
+                                <span class="month-total">${group.daysCount} дней • ${formatMoney(group.total)}</span>
+                            </div>
+                            <div class="month-days">
+                                ${group.days.map(workday => {
+                                    const salary = safeNumber(workday.salary);
+                                    return `
+                                        <div class="workday-card">
+                                            <div class="workday-info">
+                                                <div class="workday-date">
+                                                    📅 ${formatDate(workday.workDate)}
+                                                    <span class="workday-salary">${formatMoney(salary)}</span>
+                                                </div>
+                                                <div class="workday-description">
+                                                    ${workday.description || 'Рабочий день'}
+                                                </div>
+                                            </div>
+                                            <div class="workday-actions">
+                                                <button class="btn btn-danger" onclick="deleteWorkday(${workday.id})">
+                                                    🗑️ Удалить
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                        
+                        workdaysContainer.appendChild(monthGroup);
+                    });
+                    
+                    showMessage(`Загружено ${workdays.length} рабочих дней в ${sortedGroups.length} месяцах`, 'success');
+                } else {
+                    workdaysContainer.innerHTML = '<div class="loading">Ошибка загрузки данных</div>';
+                    showMessage('Ошибка при загрузке рабочих дней', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке рабочих дней:', error);
+                workdaysContainer.innerHTML = '<div class="loading">Ошибка соединения с сервером</div>';
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        // Загрузить все выплаты
+        async function loadPayments() {
+            try {
+                paymentsContainer.innerHTML = '<div class="loading">Загрузка выплат...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/payments`);
+                
+                if (response.ok) {
+                    const payments = await response.json();
+                    console.log('Получены выплаты:', payments);
+                    
+                    if (!payments || payments.length === 0) {
+                        paymentsContainer.innerHTML = `
+                            <div class="empty-state">
+                                <div>💸</div>
+                                <h3>Нет выплат</h3>
+                                <p>Добавьте первую выплату с помощью формы выше</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Сортируем по дате (новые сверху)
+                    payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+                    
+                    paymentsContainer.innerHTML = '';
+                    
+                    payments.forEach(payment => {
+                        const amount = safeNumber(payment.amount);
+                        const paymentCard = document.createElement('div');
+                        paymentCard.className = 'payment-card';
+                        paymentCard.innerHTML = `
+                            <div class="payment-info">
+                                <div class="payment-date">
+                                    💵 ${formatDate(payment.paymentDate)}
+                                    <span class="payment-amount">${formatMoney(amount)}</span>
+                                </div>
+                                <div class="payment-description">
+                                    ${payment.description || 'Выплата зарплаты'}
+                                </div>
+                            </div>
+                            <div class="payment-actions">
+                                <button class="btn btn-danger" onclick="deletePayment(${payment.id})">
+                                    🗑️ Удалить
+                                </button>
+                            </div>
+                        `;
+                        paymentsContainer.appendChild(paymentCard);
+                    });
+                    
+                    showMessage(`Загружено ${payments.length} выплат`, 'success');
+                } else {
+                    paymentsContainer.innerHTML = '<div class="loading">Ошибка загрузки данных</div>';
+                    showMessage('Ошибка при загрузке выплат', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке выплат:', error);
+                paymentsContainer.innerHTML = '<div class="loading">Ошибка соединения с сервером</div>';
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        // Добавить рабочий день
+        async function addWorkday(workdayData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/workdays`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(workdayData)
+                });
+                
+                if (response.ok) {
+                    const savedWorkday = await response.json();
+                    showMessage(`Рабочий день ${formatDate(savedWorkday.workDate)} добавлен! +${formatMoney(savedWorkday.salary)}`);
+                    workdayForm.reset();
+                    
+                    // Установить сегодняшнюю дату по умолчанию
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('workDate').value = today;
+                    
+                    await loadWorkdays();
+                    await updateSummary();
+                    return { success: true, workday: savedWorkday };
+                } else {
+                    const errorData = await response.json();
+                    showMessage(`Ошибка: ${errorData.message || 'Неизвестная ошибка'}`, 'error');
+                    return { success: false, error: errorData };
+                }
+            } catch (error) {
+                console.error('Ошибка при добавлении рабочего дня:', error);
+                showMessage('Ошибка соединения с сервером', 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Добавить выплату зарплаты
+        async function addSalaryPayment(paymentData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/payments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+                
+                if (response.ok) {
+                    const savedPayment = await response.json();
+                    showMessage(`Выплата ${formatMoney(paymentData.amount)} зафиксирована!`);
+                    salaryPaymentForm.reset();
+                    
+                    // Установить сегодняшнюю дату по умолчанию
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('paymentDate').value = today;
+                    
+                    await loadPayments();
+                    await updateSummary();
+                    return { success: true, payment: savedPayment };
+                } else {
+                    const errorData = await response.json();
+                    showMessage(`Ошибка: ${errorData.message || 'Неизвестная ошибка'}`, 'error');
+                    return { success: false, error: errorData };
+                }
+            } catch (error) {
+                console.error('Ошибка при добавлении выплаты:', error);
+                showMessage('Ошибка соединения с сервером', 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Удалить рабочий день
+        async function deleteWorkday(workdayId) {
+            if (!confirm('Вы уверены, что хотите удалить этот рабочий день?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workdays/${workdayId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showMessage('Рабочий день удален');
+                    await loadWorkdays();
+                    await updateSummary();
+                } else {
+                    showMessage('Ошибка при удалении рабочего дня', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении рабочего дня:', error);
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        // Удалить выплату
+        async function deletePayment(paymentId) {
+            if (!confirm('Вы уверены, что хотите удалить эту выплату?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/payments/${paymentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showMessage('Выплата удалена');
+                    await loadPayments();
+                    await updateSummary();
+                } else {
+                    showMessage('Ошибка при удалении выплаты', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении выплаты:', error);
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        // Переключение табов
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // Убираем активный класс у всех табов и контента
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Добавляем активный класс текущему табу и контенту
+                tab.classList.add('active');
+                document.getElementById(`${tabId}Tab`).classList.add('active');
+            });
+        });
+
+        // Обработчики событий
+        workdayForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(workdayForm);
+            
+            const workdayData = {
+                workDate: formData.get('workDate'),
+                description: formData.get('description'),
+                salary: DAILY_RATE
+            };
+            
+            if (!workdayData.workDate) {
+                showMessage('Выберите дату работы', 'error');
+                return;
+            }
+            
+            await addWorkday(workdayData);
+        });
+
+        salaryPaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(salaryPaymentForm);
+            
+            const paymentData = {
+                amount: parseFloat(formData.get('amount')),
+                description: formData.get('paymentDescription')
+            };
+            
+            if (!formData.get('paymentDate')) {
+                showMessage('Выберите дату получения', 'error');
+                return;
+            }
+            
+            if (!paymentData.amount || paymentData.amount <= 0) {
+                showMessage('Введите корректную сумму', 'error');
+                return;
+            }
+            
+            await addSalaryPayment(paymentData);
+        });
+
+        loadWorkdaysBtn.addEventListener('click', loadWorkdays);
+        loadPaymentsBtn.addEventListener('click', loadPayments);
+
+        // Автозагрузка при старте
+        document.addEventListener('DOMContentLoaded', () => {
+            // Установить сегодняшнюю дату по умолчанию
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('workDate').value = today;
+            document.getElementById('paymentDate').value = today;
+            
+            loadWorkdays();
+            loadPayments();
+            updateSummary();
+        });
+    </script>
+</body>
+</html>
