@@ -476,23 +476,16 @@
 <div class="container">
     <!-- Форма входа -->
     <div id="loginForm" class="login-form">
-        <h3>🔐 Вход в систему</h3>
-        <form id="loginFormElement">
-            <div class="form-group">
-                <label for="username">Логин:</label>
-                <input type="text" id="username" name="username" required placeholder="user1 или user2">
-            </div>
-            <div class="form-group">
-                <label for="password">Пароль:</label>
-                <input type="password" id="password" name="password" required placeholder="123">
-            </div>
-            <button type="submit" class="btn btn-success">Войти</button>
-        </form>
-        <div style="margin-top: 15px; font-size: 14px; color: #666;">
-            <p>Тестовые пользователи:</p>
-            <p>👤 user1 / 123</p>
-            <p>👤 user2 / 123</p>
+        <h3>🔐 Выберите пользователя</h3>
+        <div class="form-group">
+            <label>Выберите пользователя для входа:</label>
+            <select id="userSelect" class="form-control">
+                <option value="">-- Выберите пользователя --</option>
+                <option value='{"userId": 1, "username": "user1"}'>👤 user1</option>
+                <option value='{"userId": 2, "username": "user2"}'>👤 user2</option>
+            </select>
         </div>
+        <button onclick="quickLogin()" class="btn btn-success">Войти</button>
     </div>
 
     <!-- Основной контент -->
