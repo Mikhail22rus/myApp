@@ -51,6 +51,8 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .user-info span {
@@ -74,7 +76,7 @@ h1 {
 
 .summary-numbers {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
 }
 
@@ -343,6 +345,108 @@ input:focus, textarea:focus, select:focus {
     display: block;
 }
 
+/* Стили для сворачиваемого списка дней */
+.toggle-btn {
+    margin-bottom: 15px;
+    width: 200px;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn.collapsed {
+    background-color: #6c757d;
+}
+
+.collapsible {
+    transition: all 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+.collapsible.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.workdays-container {
+    max-height: 500px;
+    overflow-y: auto;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Стили для элементов дней */
+.workday-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 15px;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.workday-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.workday-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.workday-date {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.workday-total {
+    font-weight: bold;
+    color: #28a745;
+    font-size: 16px;
+}
+
+.workday-details {
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.workday-detail {
+    margin-bottom: 5px;
+    color: #666;
+}
+
+.btn-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-delete:hover {
+    background-color: #f8f9fa;
+}
+
+/* Анимация появления */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.workday-item {
+    animation: slideDown 0.3s ease-out;
+}
+
 /* Стили для группировки по месяцам */
 .month-group {
     margin-bottom: 25px;
@@ -421,6 +525,8 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 20px;
     padding-bottom: 15px;
     border-bottom: 2px solid #e1e5e9;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .report-header h4 {
@@ -465,7 +571,7 @@ input:focus, textarea:focus, select:focus {
 /* Карточки месяцев для месячного отчета */
 .month-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
 }
 
@@ -481,7 +587,7 @@ input:focus, textarea:focus, select:focus {
     border-left: 4px solid #4CAF50;
 }
 
-.month-header {
+.month-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -496,7 +602,7 @@ input:focus, textarea:focus, select:focus {
     font-size: 1.1rem;
 }
 
-.month-days {
+.month-days-count {
     color: #666;
     font-size: 0.9rem;
 }
@@ -536,6 +642,8 @@ input:focus, textarea:focus, select:focus {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .day-date {
@@ -546,6 +654,7 @@ input:focus, textarea:focus, select:focus {
 .day-income {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .day-description {
@@ -657,5 +766,20 @@ input:focus, textarea:focus, select:focus {
     .day-income {
         flex-direction: column;
         gap: 5px;
+    }
+
+    .workday-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .workday-total {
+        align-self: flex-end;
+    }
+
+    .user-info {
+        flex-direction: column;
+        text-align: center;
     }
 }

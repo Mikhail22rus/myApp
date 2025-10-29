@@ -661,3 +661,97 @@ document.addEventListener('DOMContentLoaded', () => {
 window.deleteWorkday = deleteWorkday;
 window.deletePayment = deletePayment;
 window.logout = logout;
+// Добавьте этот код в конец файла script.js
+
+function initializeCollapsibleDays() {
+    const workdaysContainer = document.getElementById('workdaysContainer');
+
+    // Создаем кнопку для сворачивания/разворачивания
+    if (!document.getElementById('toggleDaysBtn')) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'toggleDaysBtn';
+        toggleBtn.className = 'btn btn-secondary toggle-btn';
+        toggleBtn.innerHTML = '📂 Свернуть список дней';
+        toggleBtn.onclick = toggleWorkdaysList;
+
+        // Вставляем кнопку перед контейнером дней
+        workdaysContainer.parentNode.insertBefore(toggleBtn, workdaysContainer);
+    }
+
+    // Добавляем класс для анимации
+    workdaysContainer.classList.add('collapsible');
+}
+
+function toggleWorkdaysList() {
+    const workdaysContainer = document.getElementById('workdaysContainer');
+    const toggleBtn = document.getElementById('toggleDaysBtn');
+
+    if (workdaysContainer.classList.contains('collapsed')) {
+        // Разворачиваем
+        workdaysContainer.classList.remove('collapsed');
+        toggleBtn.innerHTML = '📂 Свернуть список дней';
+        toggleBtn.classList.remove('collapsed');
+    } else {
+        // Сворачиваем
+        workdaysContainer.classList.add('collapsed');
+        toggleBtn.innerHTML = '📁 Развернуть список дней';
+        toggleBtn.classList.add('collapsed');
+    }
+}
+
+// Обновите функцию loadWorkdays
+async function loadWorkdays() {
+    try {
+        const userId = localStorage.getItem('userId');
+        if (!userId) return;
+
+        const response = await fetch(`/api/workdays/user/${userId}`);
+        if (!response.ok) throw new Error('Ошибка загрузки дней');
+
+        const workdays = await response.json();
+        displayWorkdays(workdays);
+
+        // Инициализируем сворачивание после загрузки данных
+        initializeCollapsibleDays();
+
+    } catch (error) {
+        showMessage('Ошибка загрузки рабочих дней: ' + error.message, 'error');
+    }
+}
+
+// Обновите функцию displayWorkdays
+function displayWorkdays(workdays) {
+    const container = document.getElementById('workdaysContainer');
+
+    if (!workdays || workdays.length === 0) {
+        container.innerHTML = '<div class="no-data">Нет рабочих дней</div>';
+        return;
+    }
+
+    // Сортируем по дате (новые сверху)
+    workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+
+    const workdaysList = workdays.map(day => {
+        const date = new Date(day.workDate).toLocaleDateString('ru-RU');
+        const salary = day.salary ? formatCurrency(day.salary) : '0 ₽';
+        const bonus = day.bonus ? formatCurrency(day.bonus) : '0 ₽';
+        const total = formatCurrency((day.salary || 0) + (day.bonus || 0));
+
+        return `
+            <div class="workday-item" data-date="${day.workDate}">
+                <div class="workday-header">
+                    <span class="workday-date">📅 ${date}</span>
+                    <span class="workday-total">${total}</span>
+                    <button class="btn-delete" onclick="deleteWorkday(${day.id})">❌</button>
+                </div>
+                <div class="workday-details">
+                    <div class="workday-detail">💰 Заработок: ${salary}</div>
+                    <div class="workday-detail">🎁 Допдоход: ${bonus}</div>
+                    ${day.description ? `<div class="workday-detail">📝 ${day.description}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = workdaysList;
+}

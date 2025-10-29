@@ -15,20 +15,20 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    // Пользователи с паролями, которых нужно создать один раз
+
     private final Map<String, String> users = Map.of(
             "Миша", "пароль123",
             "Игорь", "igor2024"
     );
 
-    // Авторизация
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             String username = request.getUsername();
             String password = request.getPassword();
 
-            // Проверяем пароль для известных пользователей
+
             if (users.containsKey(username)) {
                 if (!users.get(username).equals(password)) {
                     return ResponseEntity.status(401).body(Map.of(
