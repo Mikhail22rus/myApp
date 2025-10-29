@@ -123,6 +123,22 @@ function safeNumber(value) {
 // ===== СВОРАЧИВАЕМЫЙ СПИСОК ДНЕЙ =====
 function initializeCollapsibleDays() {
     const workdaysContainer = document.getElementById('workdaysContainer');
+    const loadWorkdaysBtn = document.getElementById('loadWorkdays');
+
+    // Создаем контейнер для кнопок
+    let controlsContainer = document.getElementById('workdaysControls');
+    if (!controlsContainer) {
+        controlsContainer = document.createElement('div');
+        controlsContainer.id = 'workdaysControls';
+        controlsContainer.className = 'workdays-controls';
+
+        // Вставляем контейнер перед контейнером дней
+        const workdaysList = workdaysContainer.parentNode;
+        workdaysList.insertBefore(controlsContainer, workdaysContainer);
+
+        // Перемещаем кнопку "Обновить" в контейнер
+        controlsContainer.appendChild(loadWorkdaysBtn);
+    }
 
     // Проверяем, есть ли уже кнопка сворачивания
     if (!document.getElementById('toggleDaysBtn')) {
@@ -130,13 +146,12 @@ function initializeCollapsibleDays() {
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'toggleDaysBtn';
         toggleBtn.type = 'button';
-        toggleBtn.className = 'btn btn-secondary toggle-btn';
+        toggleBtn.className = 'btn btn-info toggle-btn';
         toggleBtn.innerHTML = '📂 Свернуть список дней';
         toggleBtn.onclick = toggleWorkdaysList;
 
-        // Вставляем кнопку после кнопки "Обновить"
-        const loadWorkdaysBtn = document.getElementById('loadWorkdays');
-        loadWorkdaysBtn.parentNode.insertBefore(toggleBtn, loadWorkdaysBtn.nextSibling);
+        // Вставляем кнопку в контейнер управления
+        controlsContainer.appendChild(toggleBtn);
     }
 
     // Добавляем класс для анимации

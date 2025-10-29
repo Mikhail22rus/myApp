@@ -211,6 +211,48 @@ input:focus, textarea:focus, select:focus {
     display: block;
 }
 
+/* Стили для кнопок управления списком дней */
+.workdays-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.workdays-controls .btn {
+    flex: 1;
+    min-width: 160px;
+    max-width: 200px;
+    margin: 0;
+}
+
+.toggle-btn {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    width: 100%;
+}
+
+.toggle-btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+    background: linear-gradient(135deg, #3ca0fe 0%, #00e0fe 100%) !important;
+}
+
+.toggle-btn.collapsed {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+}
+
+.toggle-btn.collapsed:hover {
+    background: linear-gradient(135deg, #229c3d 0%, #1cb386 100%) !important;
+}
+
 .workdays-list, .payments-list {
     margin-top: 20px;
 }
@@ -346,16 +388,6 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Стили для сворачиваемого списка дней */
-.toggle-btn {
-    margin-bottom: 15px;
-    width: 200px;
-    transition: all 0.3s ease;
-}
-
-.toggle-btn.collapsed {
-    background-color: #6c757d;
-}
-
 .collapsible {
     transition: all 0.3s ease-in-out;
     overflow: hidden;
@@ -662,8 +694,23 @@ input:focus, textarea:focus, select:focus {
     font-size: 0.9rem;
 }
 
-/* Планшеты и маленькие ноутбуки */
-@media (min-width: 768px) {
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .workdays-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .workdays-controls .btn {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .toggle-btn, .workdays-list .btn {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
     body {
         padding: 20px;
     }
@@ -717,19 +764,16 @@ input:focus, textarea:focus, select:focus {
     }
 }
 
-/* Большие экраны */
-@media (min-width: 1024px) {
-    .container {
-        padding: 40px;
-    }
-
-    .forms-row {
-        gap: 30px;
-    }
-}
-
-/* Очень маленькие экраны */
 @media (max-width: 480px) {
+    .workdays-controls {
+        gap: 8px;
+    }
+
+    .toggle-btn, .workdays-list .btn {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+
     body {
         padding: 5px;
     }
@@ -781,5 +825,16 @@ input:focus, textarea:focus, select:focus {
     .user-info {
         flex-direction: column;
         text-align: center;
+    }
+}
+
+/* Большие экраны */
+@media (min-width: 1024px) {
+    .container {
+        padding: 40px;
+    }
+
+    .forms-row {
+        gap: 30px;
     }
 }
