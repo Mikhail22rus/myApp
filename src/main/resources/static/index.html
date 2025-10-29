@@ -623,7 +623,7 @@
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    // Авторизация
+    // ===== Авторизация =====
     async function login(username, password) {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -631,6 +631,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
+
             const result = await response.json();
 
             if (result.success) {
@@ -638,15 +639,17 @@
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 showMainContent();
                 showMessage(`Добро пожаловать, ${username}!`);
+                return true;
             } else {
                 showMessage(result.message || 'Ошибка входа', 'error');
+                return false;
             }
         } catch (error) {
             showMessage('Ошибка соединения с сервером', 'error');
+            return false;
         }
     }
 
-    // Выход
     function logout() {
         currentUser = null;
         localStorage.removeItem('currentUser');
@@ -654,7 +657,17 @@
         showMessage('Вы вышли из системы');
     }
 
-    // Показ основного контента
+    function checkAuth() {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            showMainContent();
+        } else {
+            showLoginForm();
+        }
+    }
+
+    // ===== UI =====
     function showMainContent() {
         loginForm.style.display = 'none';
         mainContent.style.display = 'block';
@@ -664,23 +677,13 @@
         updateSummary();
     }
 
-    // Показ формы логина
     function showLoginForm() {
         loginForm.style.display = 'block';
         mainContent.style.display = 'none';
         loginFormElement.reset();
     }
 
-    // Проверка сохранённого пользователя
-    function checkAuth() {
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            showMainContent();
-        }
-    }
-
-    // Вспомогательные функции
+    // ===== Вспомогательные функции =====
     function showMessage(text, type = 'success') {
         messageDiv.textContent = text;
         messageDiv.className = `message ${type}`;
@@ -688,8 +691,11 @@
     }
 
     function formatDate(dateString) {
-        try { return new Date(dateString).toLocaleDateString('ru-RU'); }
-        catch { return dateString; }
+        try {
+            return new Date(dateString).toLocaleDateString('ru-RU');
+        } catch {
+            return dateString;
+        }
     }
 
     function formatMoney(amount) {
@@ -699,17 +705,18 @@
 
     function safeNumber(value) {
         if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
         const num = parseFloat(value);
         return isNaN(num) ? 0 : num;
     }
 
-    // Загрузка статистики
+    // ===== API функции =====
     async function updateSummary() {
         if (!currentUser) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/workdays/statistics?userId=${currentUser.userId}`);
-            if (response.ok) {
-                const stats = await response.json();
+            const res = await fetch(`${API_BASE_URL}/workdays/statistics?userId=${currentUser.userId}`);
+            if (res.ok) {
+                const stats = await res.json();
                 totalDaysSpan.textContent = safeNumber(stats.totalDays);
                 totalEarnedSpan.textContent = formatMoney(stats.totalEarned);
                 totalPaidSpan.textContent = formatMoney(stats.totalPaid);
@@ -722,178 +729,175 @@
         }
     }
 
-    // Загрузка рабочих дней
     async function loadWorkdays() {
         if (!currentUser) return;
-        workdaysContainer.innerHTML = '<div class="loading">Загрузка...</div>';
         try {
-            const response = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
-            if (!response.ok) throw new Error('Ошибка загрузки');
-            const workdays = await response.json();
-            if (workdays.length === 0) {
-                workdaysContainer.innerHTML = '<div class="empty-state">📭 Нет рабочих дней</div>';
-                return;
+            workdaysContainer.innerHTML = '<div class="loading">Загрузка...</div>';
+            const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
+            if (res.ok) {
+                const workdays = await res.json();
+                if (!workdays.length) {
+                    workdaysContainer.innerHTML = '<div class="empty-state">📭 Нет рабочих дней</div>';
+                    return;
+                }
+
+                workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+
+                const monthGroups = {};
+                const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+                workdays.forEach(day => {
+                    const date = new Date(day.workDate);
+                    const key = `${date.getFullYear()}-${date.getMonth()}`;
+                    if (!monthGroups[key]) monthGroups[key] = {monthName: `${monthNames[date.getMonth()]} ${date.getFullYear()}`, days: [], total:0, daysCount:0};
+                    monthGroups[key].days.push(day);
+                    monthGroups[key].total += day.salary;
+                    monthGroups[key].daysCount++;
+                });
+
+                const sortedGroups = Object.entries(monthGroups).sort(([a],[b]) => b.localeCompare(a));
+                workdaysContainer.innerHTML = '';
+                sortedGroups.forEach(([_, group]) => {
+                    const div = document.createElement('div');
+                    div.className = 'month-group';
+                    div.innerHTML = `
+                    <div class="month-header">
+                        <span>${group.monthName}</span>
+                        <span class="month-total">${group.daysCount} дней • ${formatMoney(group.total)}</span>
+                    </div>
+                    <div class="month-days">
+                        ${group.days.map(day => `
+                            <div class="workday-card">
+                                <div class="workday-info">
+                                    <div class="workday-date">📅 ${formatDate(day.workDate)} <span class="workday-salary">${formatMoney(day.salary)}</span></div>
+                                    <div class="workday-description">${day.description || 'Рабочий день'}</div>
+                                </div>
+                                <div class="workday-actions">
+                                    <button class="btn btn-danger" onclick="deleteWorkday(${day.id})">🗑️ Удалить</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                    workdaysContainer.appendChild(div);
+                });
             }
-            workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
-
-            // Группируем по месяцам
-            const monthGroups = {};
-            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-            workdays.forEach(w => {
-                const d = new Date(w.workDate), y = d.getFullYear(), m = d.getMonth();
-                const key = `${y}-${m}`;
-                if (!monthGroups[key]) monthGroups[key] = { monthName: `${monthNames[m]} ${y}`, days: [], total: 0, daysCount: 0 };
-                monthGroups[key].days.push(w);
-                monthGroups[key].total += w.salary;
-                monthGroups[key].daysCount++;
-            });
-
-            const sortedGroups = Object.entries(monthGroups).sort(([a],[b]) => b.localeCompare(a));
-            workdaysContainer.innerHTML = '';
-            sortedGroups.forEach(([key, group]) => {
-                const div = document.createElement('div');
-                div.className = 'month-group';
-                div.innerHTML = `
-                <div class="month-header">
-                    <span>${group.monthName}</span>
-                    <span class="month-total">${group.daysCount} дней • ${formatMoney(group.total)}</span>
-                </div>
-                <div class="month-days">
-                    ${group.days.map(wd => `
-                        <div class="workday-card">
-                            <div class="workday-info">
-                                <div class="workday-date">📅 ${formatDate(wd.workDate)}<span class="workday-salary">${formatMoney(wd.salary)}</span></div>
-                                <div class="workday-description">${wd.description || 'Рабочий день'}</div>
-                            </div>
-                            <div class="workday-actions">
-                                <button class="btn btn-danger" onclick="deleteWorkday(${wd.id})">🗑️ Удалить</button>
-                            </div>
-                        </div>`).join('')}
-                </div>`;
-                workdaysContainer.appendChild(div);
-            });
-
-        } catch (error) {
+        } catch (e) {
             workdaysContainer.innerHTML = '<div class="loading">Ошибка загрузки</div>';
         }
     }
 
-    // Загрузка выплат
     async function loadPayments() {
         if (!currentUser) return;
-        paymentsContainer.innerHTML = '<div class="loading">Загрузка...</div>';
         try {
-            const response = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
-            if (!response.ok) throw new Error('Ошибка загрузки');
-            const payments = await response.json();
-            if (payments.length === 0) {
-                paymentsContainer.innerHTML = '<div class="empty-state">💸 Нет выплат</div>';
-                return;
+            paymentsContainer.innerHTML = '<div class="loading">Загрузка...</div>';
+            const res = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
+            if (res.ok) {
+                const payments = await res.json();
+                if (!payments.length) {
+                    paymentsContainer.innerHTML = '<div class="empty-state">💸 Нет выплат</div>';
+                    return;
+                }
+                payments.sort((a,b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+                paymentsContainer.innerHTML = payments.map(p => `
+                <div class="payment-card">
+                    <div class="payment-info">
+                        <div class="payment-date">💵 ${formatDate(p.paymentDate)} <span class="payment-amount">${formatMoney(p.amount)}</span></div>
+                        <div class="payment-description">${p.description || 'Выплата'}</div>
+                    </div>
+                    <div class="payment-actions">
+                        <button class="btn btn-danger" onclick="deletePayment(${p.id})">🗑️ Удалить</button>
+                    </div>
+                </div>
+            `).join('');
             }
-            payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
-            paymentsContainer.innerHTML = payments.map(p => `
-            <div class="payment-card">
-                <div class="payment-info">
-                    <div class="payment-date">💵 ${formatDate(p.paymentDate)}<span class="payment-amount">${formatMoney(p.amount)}</span></div>
-                    <div class="payment-description">${p.description || 'Выплата'}</div>
-                </div>
-                <div class="payment-actions">
-                    <button class="btn btn-danger" onclick="deletePayment(${p.id})">🗑️ Удалить</button>
-                </div>
-            </div>`).join('');
-        } catch (error) {
+        } catch(e) {
             paymentsContainer.innerHTML = '<div class="loading">Ошибка загрузки</div>';
         }
     }
 
-    // Добавление рабочего дня
     async function addWorkday(workdayData) {
         if (!currentUser) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(workdayData)
+            const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify(workdayData)
             });
-            if (!response.ok) {
-                const error = await response.json();
+            if (res.ok) {
+                const saved = await res.json();
+                showMessage(`День добавлен! +${formatMoney(saved.salary)}`);
+                workdayForm.reset();
+                document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+                loadWorkdays();
+                updateSummary();
+            } else {
+                const error = await res.json();
                 showMessage(error.message || 'Ошибка', 'error');
-                return;
             }
-            const savedWorkday = await response.json();
-            showMessage(`День добавлен! +${formatMoney(savedWorkday.salary)}`);
-            workdayForm.reset();
-            document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
-            loadWorkdays();
-            updateSummary();
-        } catch {
-            showMessage('Ошибка соединения', 'error');
-        }
+        } catch(e){ showMessage('Ошибка соединения', 'error'); }
     }
 
-    // Добавление выплаты
     async function addSalaryPayment(paymentData) {
         if (!currentUser) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(paymentData)
+            const res = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify(paymentData)
             });
-            if (!response.ok) {
-                const error = await response.json();
+            if (res.ok) {
+                showMessage(`Выплата ${formatMoney(paymentData.amount)} добавлена!`);
+                salaryPaymentForm.reset();
+                loadPayments();
+                updateSummary();
+            } else {
+                const error = await res.json();
                 showMessage(error.message || 'Ошибка', 'error');
-                return;
             }
-            showMessage(`Выплата ${formatMoney(paymentData.amount)} добавлена!`);
-            salaryPaymentForm.reset();
-            loadPayments();
-            updateSummary();
-        } catch {
-            showMessage('Ошибка соединения', 'error');
-        }
+        } catch(e){ showMessage('Ошибка соединения', 'error'); }
     }
 
-    // Удаление
     async function deleteWorkday(id) {
         if (!currentUser || !confirm('Удалить день?')) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/workdays/${id}?userId=${currentUser.userId}`, { method: 'DELETE' });
-            if (response.ok) { showMessage('День удален'); loadWorkdays(); updateSummary(); }
-        } catch { showMessage('Ошибка удаления', 'error'); }
+            const res = await fetch(`${API_BASE_URL}/workdays/${id}?userId=${currentUser.userId}`, { method:'DELETE' });
+            if (res.ok) { showMessage('День удален'); loadWorkdays(); updateSummary(); }
+        } catch(e){ showMessage('Ошибка удаления', 'error'); }
     }
 
     async function deletePayment(id) {
         if (!currentUser || !confirm('Удалить выплату?')) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/payments/${id}?userId=${currentUser.userId}`, { method: 'DELETE' });
-            if (response.ok) { showMessage('Выплата удалена'); loadPayments(); updateSummary(); }
-        } catch { showMessage('Ошибка удаления', 'error'); }
+            const res = await fetch(`${API_BASE_URL}/payments/${id}?userId=${currentUser.userId}`, { method:'DELETE' });
+            if (res.ok) { showMessage('Выплата удалена'); loadPayments(); updateSummary(); }
+        } catch(e){ showMessage('Ошибка удаления', 'error'); }
     }
 
-    // События
-    loginFormElement.addEventListener('submit', e => {
+    // ===== Обработчики событий =====
+    loginFormElement.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const fd = new FormData(loginFormElement);
-        login(fd.get('username'), fd.get('password'));
+        const data = new FormData(loginFormElement);
+        await login(data.get('username'), data.get('password'));
     });
 
-    workdayForm.addEventListener('submit', e => {
+    workdayForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const fd = new FormData(workdayForm);
-        addWorkday({
-            workDate: fd.get('workDate'),
-            description: fd.get('description'),
-            salary: parseInt(fd.get('salary') || DEFAULT_SALARY)
+        const data = new FormData(workdayForm);
+        const salary = data.get('salary') || DEFAULT_SALARY;
+        await addWorkday({
+            workDate: data.get('workDate'),
+            description: data.get('description'),
+            salary: parseInt(salary)
         });
     });
 
-    salaryPaymentForm.addEventListener('submit', e => {
+    salaryPaymentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const fd = new FormData(salaryPaymentForm);
-        addSalaryPayment({
-            amount: parseFloat(fd.get('amount')),
-            description: fd.get('paymentDescription')
+        const data = new FormData(salaryPaymentForm);
+        await addSalaryPayment({
+            amount: parseFloat(data.get('amount')),
+            description: data.get('paymentDescription')
         });
     });
 
@@ -909,17 +913,18 @@
         });
     });
 
-    // Инициализация
+    // ===== Инициализация =====
     document.addEventListener('DOMContentLoaded', () => {
         checkAuth();
         document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
     });
 
-    // Глобальные функции
+    // ===== Глобальные функции =====
     window.deleteWorkday = deleteWorkday;
     window.deletePayment = deletePayment;
     window.logout = logout;
 </script>
+
 
 </body>
 </html>
