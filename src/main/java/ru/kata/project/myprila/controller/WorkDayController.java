@@ -7,7 +7,9 @@ import ru.kata.project.myprila.entity.WorkDay;
 import ru.kata.project.myprila.service.WorkDayService;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/workdays")
@@ -30,17 +32,106 @@ public class WorkDayController {
         }
     }
 
-    // ✅ Добавить новый рабочий день ДЛЯ ПОЛЬЗОВАТЕЛЯ
+    // ✅ ОСНОВНОЙ МЕТОД: создать или обновить рабочий день (зарплата + бонус)
     @PostMapping
-    public ResponseEntity<?> createWorkDay(@RequestBody WorkDay workDay, @RequestParam Long userId) {
+    public ResponseEntity<?> addOrUpdateWorkDay(@RequestBody WorkDayRequest request, @RequestParam Long userId) {
         try {
-            System.out.println("📥 POST /api/workdays - создание дня для пользователя ID: " + userId + ", дата: " + workDay.getWorkDate());
+            System.out.println("📥 POST /api/workdays - создание/обновление дня для пользователя ID: " + userId +
+                    ", дата: " + request.getWorkDate() +
+                    ", зарплата: " + request.getSalary() +
+                    ", бонус: " + request.getBonus());
 
-            WorkDay savedWorkDay = workDayService.createWorkDay(workDay, userId);
-            return ResponseEntity.ok(savedWorkDay);
+            WorkDay workDay = workDayService.addOrUpdateWorkDay(
+                    request.getWorkDate(),
+                    request.getDescription(),
+                    request.getSalary(),
+                    request.getBonus(),
+                    userId
+            );
+
+            System.out.println("✅ День успешно сохранен ID: " + workDay.getId());
+            return ResponseEntity.ok(workDay);
 
         } catch (RuntimeException e) {
             System.out.println("❌ Ошибка при создании рабочего дня: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("❌ Неизвестная ошибка: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Внутренняя ошибка сервера"));
+        }
+    }
+
+    // ✅ ДОБАВИТЬ ТОЛЬКО ЗАРАБОТОК
+    @PostMapping("/salary")
+    public ResponseEntity<?> addSalaryOnly(@RequestBody SalaryRequest request, @RequestParam Long userId) {
+        try {
+            System.out.println("💰 POST /api/workdays/salary - добавление зарплаты для пользователя ID: " + userId +
+                    ", дата: " + request.getWorkDate() +
+                    ", сумма: " + request.getSalary());
+
+            WorkDay workDay = workDayService.addSalaryOnly(
+                    request.getWorkDate(),
+                    request.getSalary(),
+                    request.getDescription(),
+                    userId
+            );
+
+            System.out.println("✅ Зарплата успешно добавлена ID: " + workDay.getId());
+            return ResponseEntity.ok(workDay);
+
+        } catch (RuntimeException e) {
+            System.out.println("❌ Ошибка при добавлении зарплаты: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("❌ Неизвестная ошибка: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Внутренняя ошибка сервера"));
+        }
+    }
+
+    // ✅ ДОБАВИТЬ ТОЛЬКО БОНУС
+    @PostMapping("/bonus")
+    public ResponseEntity<?> addBonusOnly(@RequestBody BonusRequest request, @RequestParam Long userId) {
+        try {
+            System.out.println("🎁 POST /api/workdays/bonus - добавление бонуса для пользователя ID: " + userId +
+                    ", дата: " + request.getWorkDate() +
+                    ", сумма: " + request.getBonus());
+
+            WorkDay workDay = workDayService.addBonusOnly(
+                    request.getWorkDate(),
+                    request.getBonus(),
+                    request.getDescription(),
+                    userId
+            );
+
+            System.out.println("✅ Бонус успешно добавлен ID: " + workDay.getId());
+            return ResponseEntity.ok(workDay);
+
+        } catch (RuntimeException e) {
+            System.out.println("❌ Ошибка при добавлении бонуса: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("❌ Неизвестная ошибка: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Внутренняя ошибка сервера"));
+        }
+    }
+
+    // ✅ ПОЛУЧИТЬ ДЕНЬ ПО ДАТЕ
+    @GetMapping("/by-date")
+    public ResponseEntity<?> getWorkDayByDate(@RequestParam LocalDate workDate, @RequestParam Long userId) {
+        try {
+            System.out.println("📅 GET /api/workdays/by-date - запрос дня по дате: " + workDate + " для пользователя ID: " + userId);
+            Optional<WorkDay> workDay = workDayService.getWorkDayByDate(workDate, userId);
+
+            if (workDay.isPresent()) {
+                System.out.println("✅ Найден день: " + workDay.get());
+            } else {
+                System.out.println("ℹ️ День не найден");
+            }
+
+            return ResponseEntity.ok(workDay.orElse(null));
+
+        } catch (RuntimeException e) {
+            System.out.println("❌ Ошибка при поиске дня: " + e.getMessage());
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             System.out.println("❌ Неизвестная ошибка: " + e.getMessage());
@@ -117,18 +208,53 @@ public class WorkDayController {
         return ResponseEntity.ok("Бэкенд для учета рабочих дней работает! 🚀");
     }
 
+    // DTO КЛАССЫ
 
+    public static class WorkDayRequest {
+        private LocalDate workDate;
+        private String description;
+        private BigDecimal salary;
+        private BigDecimal bonus;
 
-    // Класс для ошибок
+        public LocalDate getWorkDate() { return workDate; }
+        public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        public BigDecimal getSalary() { return salary; }
+        public void setSalary(BigDecimal salary) { this.salary = salary; }
+        public BigDecimal getBonus() { return bonus; }
+        public void setBonus(BigDecimal bonus) { this.bonus = bonus; }
+    }
+
+    public static class SalaryRequest {
+        private LocalDate workDate;
+        private BigDecimal salary;
+        private String description;
+
+        public LocalDate getWorkDate() { return workDate; }
+        public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }
+        public BigDecimal getSalary() { return salary; }
+        public void setSalary(BigDecimal salary) { this.salary = salary; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+    }
+
+    public static class BonusRequest {
+        private LocalDate workDate;
+        private BigDecimal bonus;
+        private String description;
+
+        public LocalDate getWorkDate() { return workDate; }
+        public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }
+        public BigDecimal getBonus() { return bonus; }
+        public void setBonus(BigDecimal bonus) { this.bonus = bonus; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+    }
+
     public static class ErrorResponse {
         private final String message;
-
-        public ErrorResponse(String message) {
-            this.message = message;
-        }
-
-        public String getMessage() {
-            return message;
-        }
+        public ErrorResponse(String message) { this.message = message; }
+        public String getMessage() { return message; }
     }
 }
