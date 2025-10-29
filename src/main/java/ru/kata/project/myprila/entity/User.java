@@ -1,7 +1,6 @@
 package ru.kata.project.myprila.entity;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
 
 @Entity
 @Table(name = "users")
@@ -15,9 +14,6 @@ public class User {
 
     @Column(nullable = false)
     private String password;
-
-    @Column(name = "additional_earnings", nullable = false)
-    private BigDecimal additionalEarnings = BigDecimal.ZERO; // Новое поле для допзаработка
 
     // Конструкторы
     public User() {}
@@ -36,7 +32,4 @@ public class User {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
-
-    public BigDecimal getAdditionalEarnings() { return additionalEarnings; }
-    public void setAdditionalEarnings(BigDecimal additionalEarnings) { this.additionalEarnings = additionalEarnings; }
 }

@@ -110,6 +110,25 @@ public class WorkDayController {
         }
     }
 
+    // ✅ Тестовый endpoint
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        System.out.println("✅ Тестовый endpoint вызван");
+        return ResponseEntity.ok("Бэкенд для учета рабочих дней работает! 🚀");
+    }
+
+    // ✅ Проверка состояния сервиса
+    @GetMapping("/status")
+    public ResponseEntity<String> getServiceStatus(@RequestParam Long userId) {
+        try {
+            System.out.println("🔧 GET /api/workdays/status - проверка состояния для пользователя ID: " + userId);
+            String status = workDayService.getServiceStatus(userId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            System.out.println("❌ Ошибка при проверке состояния: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Ошибка сервиса: " + e.getMessage());
+        }
+    }
 
     // Класс для ошибок
     public static class ErrorResponse {
