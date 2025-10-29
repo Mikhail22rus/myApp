@@ -157,7 +157,7 @@ public class WorkDayController {
         }
     }
 
-    // ✅ Удалить рабочий день ПОЛЬЗОВАТЕЛЯ
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteWorkDay(@PathVariable Long id, @RequestParam Long userId) {
         try {
