@@ -19,6 +19,7 @@ body {
     border-radius: 15px;
     padding: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
 }
 
 h1 {
@@ -60,6 +61,7 @@ h1 {
     color: #1976d2;
 }
 
+/* Финансовая сводка - исправленная */
 .summary-card {
     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
     color: white;
@@ -67,6 +69,8 @@ h1 {
     border-radius: 10px;
     margin-bottom: 20px;
     text-align: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .summary-card h2 {
@@ -76,24 +80,31 @@ h1 {
 
 .summary-numbers {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    width: 100%;
 }
 
 .summary-item {
     padding: 10px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .summary-value {
-    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    font-size: clamp(1.1rem, 3vw, 1.6rem);
     font-weight: bold;
     margin-bottom: 5px;
     word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .summary-label {
     font-size: clamp(0.7rem, 2vw, 0.8rem);
     opacity: 0.9;
+    line-height: 1.2;
 }
 
 .balance-positive {
@@ -145,6 +156,7 @@ input, textarea, select {
     border-radius: 8px;
     font-size: 16px;
     transition: border-color 0.3s;
+    box-sizing: border-box;
 }
 
 input:focus, textarea:focus, select:focus {
@@ -217,6 +229,7 @@ input:focus, textarea:focus, select:focus {
     gap: 10px;
     margin-bottom: 15px;
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .workdays-controls .btn {
@@ -255,10 +268,12 @@ input:focus, textarea:focus, select:focus {
 
 .workdays-list, .payments-list {
     margin-top: 20px;
+    width: 100%;
 }
 
 .workdays-container, .payments-container {
     margin-top: 15px;
+    width: 100%;
 }
 
 .workday-card, .payment-card {
@@ -269,6 +284,8 @@ input:focus, textarea:focus, select:focus {
     display: flex;
     flex-direction: column;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .workday-card {
@@ -282,6 +299,7 @@ input:focus, textarea:focus, select:focus {
 .workday-info, .payment-info {
     flex-grow: 1;
     margin-bottom: 10px;
+    width: 100%;
 }
 
 .workday-date, .payment-date {
@@ -292,17 +310,20 @@ input:focus, textarea:focus, select:focus {
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+    width: 100%;
 }
 
 .workday-description, .payment-description {
     color: #666;
     font-size: clamp(0.85rem, 2.5vw, 0.9rem);
     line-height: 1.4;
+    width: 100%;
 }
 
 .workday-actions, .payment-actions {
     display: flex;
     justify-content: flex-end;
+    width: 100%;
 }
 
 .workday-salary, .payment-amount, .workday-bonus {
@@ -332,12 +353,14 @@ input:focus, textarea:focus, select:focus {
     padding: 20px;
     color: #666;
     font-size: clamp(1rem, 3vw, 1.1rem);
+    width: 100%;
 }
 
 .empty-state {
     text-align: center;
     padding: 30px;
     color: #666;
+    width: 100%;
 }
 
 .empty-state div:first-child {
@@ -361,6 +384,7 @@ input:focus, textarea:focus, select:focus {
     border-bottom: 2px solid #e1e5e9;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
 }
 
 .tab {
@@ -381,6 +405,7 @@ input:focus, textarea:focus, select:focus {
 
 .tab-content {
     display: none;
+    width: 100%;
 }
 
 .tab-content.active {
@@ -391,6 +416,7 @@ input:focus, textarea:focus, select:focus {
 .collapsible {
     transition: all 0.3s ease-in-out;
     overflow: hidden;
+    width: 100%;
 }
 
 .collapsible.collapsed {
@@ -404,6 +430,7 @@ input:focus, textarea:focus, select:focus {
     max-height: 500px;
     overflow-y: auto;
     transition: all 0.3s ease-in-out;
+    width: 100%;
 }
 
 /* Стили для элементов дней */
@@ -414,6 +441,8 @@ input:focus, textarea:focus, select:focus {
     padding: 15px;
     background: white;
     transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .workday-item:hover {
@@ -426,6 +455,7 @@ input:focus, textarea:focus, select:focus {
     align-items: center;
     margin-bottom: 10px;
     cursor: pointer;
+    width: 100%;
 }
 
 .workday-date {
@@ -442,6 +472,7 @@ input:focus, textarea:focus, select:focus {
 .workday-details {
     padding-top: 10px;
     border-top: 1px solid #eee;
+    width: 100%;
 }
 
 .workday-detail {
@@ -486,6 +517,7 @@ input:focus, textarea:focus, select:focus {
     border-radius: 10px;
     overflow: hidden;
     background: white;
+    width: 100%;
 }
 
 .month-header {
@@ -497,6 +529,8 @@ input:focus, textarea:focus, select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .month-total {
@@ -508,6 +542,7 @@ input:focus, textarea:focus, select:focus {
 
 .month-days {
     background: white;
+    width: 100%;
 }
 
 .month-days .workday-card {
@@ -515,6 +550,7 @@ input:focus, textarea:focus, select:focus {
     border-radius: 0;
     border-left: none;
     border-bottom: 1px solid #e1e5e9;
+    width: 100%;
 }
 
 .month-days .workday-card:last-child {
@@ -527,6 +563,8 @@ input:focus, textarea:focus, select:focus {
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .reports-section h3 {
@@ -540,6 +578,7 @@ input:focus, textarea:focus, select:focus {
     grid-template-columns: 1fr;
     gap: 15px;
     margin-bottom: 20px;
+    width: 100%;
 }
 
 .report-container {
@@ -548,6 +587,8 @@ input:focus, textarea:focus, select:focus {
     padding: 20px;
     margin-top: 20px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .report-header {
@@ -559,6 +600,7 @@ input:focus, textarea:focus, select:focus {
     border-bottom: 2px solid #e1e5e9;
     flex-wrap: wrap;
     gap: 10px;
+    width: 100%;
 }
 
 .report-header h4 {
@@ -569,6 +611,7 @@ input:focus, textarea:focus, select:focus {
 .report-content {
     max-height: 600px;
     overflow-y: auto;
+    width: 100%;
 }
 
 /* Таблицы отчетов */
@@ -605,6 +648,7 @@ input:focus, textarea:focus, select:focus {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
+    width: 100%;
 }
 
 .month-card {
@@ -613,6 +657,8 @@ input:focus, textarea:focus, select:focus {
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .month-card.active {
@@ -626,6 +672,7 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid #e1e5e9;
+    width: 100%;
 }
 
 .month-name {
@@ -643,6 +690,7 @@ input:focus, textarea:focus, select:focus {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+    width: 100%;
 }
 
 .stat-item {
@@ -667,6 +715,8 @@ input:focus, textarea:focus, select:focus {
     padding: 12px;
     margin-bottom: 10px;
     border-left: 4px solid #667eea;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .day-header {
@@ -676,6 +726,7 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 8px;
     flex-wrap: wrap;
     gap: 10px;
+    width: 100%;
 }
 
 .day-date {
@@ -692,6 +743,7 @@ input:focus, textarea:focus, select:focus {
 .day-description {
     color: #666;
     font-size: 0.9rem;
+    width: 100%;
 }
 
 /* Адаптивность для мобильных устройств */
@@ -712,55 +764,66 @@ input:focus, textarea:focus, select:focus {
     }
 
     body {
-        padding: 20px;
+        padding: 10px 5px;
     }
 
     .container {
-        padding: 30px;
+        padding: 15px;
+        border-radius: 10px;
     }
 
     .summary-numbers {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 15px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
     }
 
     .summary-item {
-        padding: 15px;
+        padding: 8px 4px;
+    }
+
+    .summary-value {
+        font-size: 1rem;
+    }
+
+    .summary-label {
+        font-size: 0.7rem;
     }
 
     .forms-row {
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        grid-template-columns: 1fr;
+        gap: 15px;
     }
 
     .btn {
-        width: auto;
+        width: 100%;
     }
 
     .workday-card, .payment-card {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
     }
 
     .workday-info, .payment-info {
-        margin-bottom: 0;
+        margin-bottom: 10px;
     }
 
     .workday-actions, .payment-actions {
-        justify-content: flex-start;
+        justify-content: center;
     }
 
     .workday-date, .payment-date {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
     }
 
     .report-params {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
 
     .month-stats {
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .month-cards {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -775,30 +838,50 @@ input:focus, textarea:focus, select:focus {
     }
 
     body {
-        padding: 5px;
+        padding: 5px 2px;
     }
 
     .container {
-        padding: 15px;
-        border-radius: 10px;
+        padding: 12px 8px;
+        border-radius: 8px;
+    }
+
+    .summary-card {
+        padding: 15px 8px;
+        margin: 0 -4px 15px -4px;
+        border-radius: 8px;
+    }
+
+    .summary-numbers {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .summary-item {
+        padding: 6px 3px;
+    }
+
+    .summary-value {
+        font-size: 0.9rem;
+    }
+
+    .summary-label {
+        font-size: 0.65rem;
     }
 
     .summary-card,
     .add-day-form,
     .salary-payment-form {
-        padding: 15px;
+        padding: 15px 10px;
     }
 
     .workday-card, .payment-card {
-        padding: 12px;
+        padding: 12px 10px;
     }
 
     .tab {
         padding: 10px 12px;
-    }
-
-    .month-cards {
-        grid-template-columns: 1fr;
+        font-size: 14px;
     }
 
     .report-header {
@@ -825,6 +908,34 @@ input:focus, textarea:focus, select:focus {
     .user-info {
         flex-direction: column;
         text-align: center;
+        gap: 10px;
+    }
+
+    .user-info .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 360px) {
+    .summary-numbers {
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+    }
+
+    .summary-item {
+        padding: 5px 2px;
+    }
+
+    .summary-value {
+        font-size: 0.85rem;
+    }
+
+    .summary-label {
+        font-size: 0.6rem;
+    }
+
+    .container {
+        padding: 10px 5px;
     }
 }
 
@@ -835,6 +946,23 @@ input:focus, textarea:focus, select:focus {
     }
 
     .forms-row {
+        grid-template-columns: 1fr 1fr;
         gap: 30px;
+    }
+}
+
+/* Планшеты */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .container {
+        padding: 25px;
+    }
+
+    .summary-numbers {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .forms-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
     }
 }
