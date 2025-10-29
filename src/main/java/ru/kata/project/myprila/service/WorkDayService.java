@@ -12,6 +12,7 @@ import ru.kata.project.myprila.repo.WorkDayReposytory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class WorkDayService {
@@ -35,24 +36,125 @@ public class WorkDayService {
         return workDayRepository.findByUserIdOrderByWorkDateDesc(userId);
     }
 
-    public WorkDay createWorkDay(WorkDay workDay, Long userId) {
+    /**
+     * Основной метод: создает или обновляет рабочий день
+     * Можно передать и зарплату, и бонус, или только что-то одно
+     */
+    public WorkDay addOrUpdateWorkDay(LocalDate workDate, String description, BigDecimal salary, BigDecimal bonus, Long userId) {
         User user = validateUserExists(userId);
 
-        if (workDayRepository.existsByWorkDateAndUserId(workDay.getWorkDate(), userId)) {
-            throw new RuntimeException("Рабочий день на эту дату уже существует");
+        // Ищем существующий день
+        Optional<WorkDay> existingDay = workDayRepository.findByWorkDateAndUserId(workDate, userId);
+
+        WorkDay workDay;
+
+        if (existingDay.isPresent()) {
+            // Обновляем существующий день
+            workDay = existingDay.get();
+
+            if (description != null && !description.trim().isEmpty()) {
+                workDay.setDescription(description);
+            }
+            if (salary != null && salary.compareTo(ZERO) >= 0) {
+                workDay.setSalary(salary);
+            }
+            if (bonus != null && bonus.compareTo(ZERO) >= 0) {
+                workDay.setBonus(bonus);
+            }
+        } else {
+            // Создаем новый день
+            workDay = new WorkDay();
+            workDay.setWorkDate(workDate);
+            workDay.setUser(user);
+            workDay.setDescription(description != null ? description : "Рабочий день");
+            workDay.setSalary(salary != null ? salary : DEFAULT_SALARY);
+            workDay.setBonus(bonus != null ? bonus : ZERO);
         }
 
-        workDay.setUser(user);
+        return workDayRepository.save(workDay);
+    }
 
-        if (workDay.getSalary() == null) {
-            workDay.setSalary(DEFAULT_SALARY);
+    /**
+     * Добавить только заработок (без изменения бонуса)
+     */
+    public WorkDay addSalaryOnly(LocalDate workDate, BigDecimal salary, String description, Long userId) {
+        User user = validateUserExists(userId);
+
+        if (salary == null || salary.compareTo(ZERO) < 0) {
+            throw new RuntimeException("Заработок должен быть положительным числом");
         }
 
-        if (workDay.getBonus() == null) {
+        // Ищем существующий день
+        Optional<WorkDay> existingDay = workDayRepository.findByWorkDateAndUserId(workDate, userId);
+
+        WorkDay workDay;
+
+        if (existingDay.isPresent()) {
+            // Обновляем заработок в существующем дне
+            workDay = existingDay.get();
+            workDay.setSalary(salary);
+            if (description != null && !description.trim().isEmpty()) {
+                workDay.setDescription(description);
+            }
+        } else {
+            // Создаем новый день только с заработком
+            workDay = new WorkDay();
+            workDay.setWorkDate(workDate);
+            workDay.setUser(user);
+            workDay.setDescription(description != null ? description : "Рабочий день");
+            workDay.setSalary(salary);
             workDay.setBonus(ZERO);
         }
 
         return workDayRepository.save(workDay);
+    }
+
+    /**
+     * Добавить только бонус (без изменения заработка)
+     */
+    public WorkDay addBonusOnly(LocalDate workDate, BigDecimal bonus, String description, Long userId) {
+        User user = validateUserExists(userId);
+
+        if (bonus == null || bonus.compareTo(ZERO) < 0) {
+            throw new RuntimeException("Бонус должен быть положительным числом");
+        }
+
+        // Ищем существующий день
+        Optional<WorkDay> existingDay = workDayRepository.findByWorkDateAndUserId(workDate, userId);
+
+        WorkDay workDay;
+
+        if (existingDay.isPresent()) {
+            // Обновляем бонус в существующем дне
+            workDay = existingDay.get();
+            workDay.setBonus(bonus);
+            if (description != null && !description.trim().isEmpty()) {
+                // Добавляем описание к существующему, если нужно
+                if (workDay.getDescription() != null && !workDay.getDescription().contains(description)) {
+                    workDay.setDescription(workDay.getDescription() + "; " + description);
+                } else if (workDay.getDescription() == null) {
+                    workDay.setDescription(description);
+                }
+            }
+        } else {
+            // Создаем новый день только с бонусом
+            workDay = new WorkDay();
+            workDay.setWorkDate(workDate);
+            workDay.setUser(user);
+            workDay.setDescription(description != null ? description : "Дополнительный доход");
+            workDay.setSalary(ZERO); // Основной заработок 0
+            workDay.setBonus(bonus);
+        }
+
+        return workDayRepository.save(workDay);
+    }
+
+    /**
+     * Получить рабочий день по дате
+     */
+    public Optional<WorkDay> getWorkDayByDate(LocalDate workDate, Long userId) {
+        validateUserExists(userId);
+        return workDayRepository.findByWorkDateAndUserId(workDate, userId);
     }
 
     public WorkDay updateWorkDay(Long workDayId, WorkDay workDayUpdates, Long userId) {

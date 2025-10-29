@@ -14,7 +14,7 @@ public interface WorkDayReposytory extends JpaRepository<WorkDay, Long> {
 
     // Найти рабочий день по дате
     Optional<WorkDay> findByWorkDate(LocalDate workDate);
-
+    Optional<WorkDay> findByWorkDateAndUserId(LocalDate workDate, Long userId);
     // Проверить существование дня по дате
     boolean existsByWorkDate(LocalDate workDate);
 
