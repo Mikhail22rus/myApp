@@ -15,49 +15,47 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    // Пользователи с разными паролями
+    // Пользователи с паролями, которых нужно создать один раз
     private final Map<String, String> users = Map.of(
             "Миша", "пароль123",
             "Игорь", "igor2024"
     );
 
+    // Авторизация
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             String username = request.getUsername();
             String password = request.getPassword();
 
-            // Проверяем существование пользователя и пароль
+            // Проверяем пароль для известных пользователей
             if (users.containsKey(username)) {
-                if (users.get(username).equals(password)) {
-
-                    // Ищем пользователя в базе
-                    User user = userRepository.findByUsername(username);
-                    if (user == null) {
-                        return ResponseEntity.status(401).body(Map.of(
-                                "success", false,
-                                "message", "Пользователь не найден в системе"
-                        ));
-                    }
-
-                    return ResponseEntity.ok(Map.of(
-                            "success", true,
-                            "userId", user.getId(),
-                            "username", user.getUsername()
-                    ));
-                } else {
+                if (!users.get(username).equals(password)) {
                     return ResponseEntity.status(401).body(Map.of(
                             "success", false,
                             "message", "Неверный пароль"
                     ));
                 }
+
+                User user = userRepository.findByUsername(username);
+                if (user == null) {
+                    return ResponseEntity.status(401).body(Map.of(
+                            "success", false,
+                            "message", "Пользователь не найден в системе"
+                    ));
+                }
+
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "userId", user.getId(),
+                        "username", user.getUsername()
+                ));
             }
 
             return ResponseEntity.status(401).body(Map.of(
                     "success", false,
                     "message", "Пользователь не найден"
             ));
-
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                     "success", false,
@@ -66,25 +64,33 @@ public class AuthController {
         }
     }
 
-    // Endpoint для создания пользователей (вызвать один раз)
+    // Создание пользователей (один раз)
     @PostMapping("/create-users")
     public ResponseEntity<?> createUsers() {
         try {
-            // Очищаем старых пользователей
-            userRepository.deleteAll();
+            int createdCount = 0;
 
-            // Создаем новых пользователей
             for (Map.Entry<String, String> entry : users.entrySet()) {
-                User user = new User();
-                user.setUsername(entry.getKey());
-                user.setPassword(entry.getValue());
-                userRepository.save(user);
-                System.out.println("Создан пользователь: " + entry.getKey() + " / " + entry.getValue());
+                String username = entry.getKey();
+
+                // Создаем только если пользователя нет
+                if (userRepository.findByUsername(username) == null) {
+                    User user = new User();
+                    user.setUsername(username);
+                    user.setPassword(entry.getValue());
+                    userRepository.save(user);
+                    createdCount++;
+                    System.out.println("Создан пользователь: " + username + " / " + entry.getValue());
+                }
             }
+
+            String message = createdCount > 0
+                    ? "Создано пользователей: " + createdCount
+                    : "Все пользователи уже существуют";
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Пользователи созданы: Миша (пароль123), Игорь (igor2024)"
+                    "message", message
             ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
@@ -94,7 +100,7 @@ public class AuthController {
         }
     }
 
-    // Endpoint для проверки существующих пользователей
+    // Проверка пользователей
     @GetMapping("/check-users")
     public ResponseEntity<?> checkUsers() {
         try {
@@ -105,7 +111,7 @@ public class AuthController {
                     "users", allUsers.stream()
                             .map(u -> Map.of("id", u.getId(), "username", u.getUsername()))
                             .toList(),
-                    "message", allUsers.size() > 0 ? "Пользователи существуют" : "Пользователи не найдены"
+                    "message", allUsers.isEmpty() ? "Пользователи не найдены" : "Пользователи существуют"
             ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
@@ -115,24 +121,14 @@ public class AuthController {
         }
     }
 
+    // DTO для логина
     public static class LoginRequest {
         private String username;
         private String password;
 
-        public String getUsername() {
-            return username;
-        }
-
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
     }
 }
