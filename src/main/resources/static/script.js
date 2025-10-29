@@ -33,7 +33,7 @@ const reportTitle = document.getElementById('reportTitle');
 const reportContent = document.getElementById('reportContent');
 const exportReportBtn = document.getElementById('exportReport');
 
-// ===== Авторизация =====
+// ===== АВТОРИЗАЦИЯ =====
 async function login(username, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -77,7 +77,7 @@ function checkAuth() {
     }
 }
 
-// ===== UI =====
+// ===== UI ФУНКЦИИ =====
 function showMainContent() {
     loginForm.style.display = 'none';
     mainContent.style.display = 'block';
@@ -85,7 +85,7 @@ function showMainContent() {
     loadWorkdays();
     loadPayments();
     updateSummary();
-    initReports(); // Инициализируем отчеты
+    initReports();
 }
 
 function showLoginForm() {
@@ -94,7 +94,6 @@ function showLoginForm() {
     loginFormElement.reset();
 }
 
-// ===== Вспомогательные функции =====
 function showMessage(text, type = 'success') {
     messageDiv.textContent = text;
     messageDiv.className = `message ${type}`;
@@ -121,7 +120,47 @@ function safeNumber(value) {
     return isNaN(num) ? 0 : num;
 }
 
-// ===== API функции =====
+// ===== СВОРАЧИВАЕМЫЙ СПИСОК ДНЕЙ =====
+function initializeCollapsibleDays() {
+    const workdaysContainer = document.getElementById('workdaysContainer');
+
+    // Проверяем, есть ли уже кнопка сворачивания
+    if (!document.getElementById('toggleDaysBtn')) {
+        // Создаем кнопку для сворачивания/разворачивания
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'toggleDaysBtn';
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-secondary toggle-btn';
+        toggleBtn.innerHTML = '📂 Свернуть список дней';
+        toggleBtn.onclick = toggleWorkdaysList;
+
+        // Вставляем кнопку после кнопки "Обновить"
+        const loadWorkdaysBtn = document.getElementById('loadWorkdays');
+        loadWorkdaysBtn.parentNode.insertBefore(toggleBtn, loadWorkdaysBtn.nextSibling);
+    }
+
+    // Добавляем класс для анимации
+    workdaysContainer.classList.add('collapsible');
+}
+
+function toggleWorkdaysList() {
+    const workdaysContainer = document.getElementById('workdaysContainer');
+    const toggleBtn = document.getElementById('toggleDaysBtn');
+
+    if (workdaysContainer.classList.contains('collapsed')) {
+        // Разворачиваем
+        workdaysContainer.classList.remove('collapsed');
+        toggleBtn.innerHTML = '📂 Свернуть список дней';
+        toggleBtn.classList.remove('collapsed');
+    } else {
+        // Сворачиваем
+        workdaysContainer.classList.add('collapsed');
+        toggleBtn.innerHTML = '📁 Развернуть список дней';
+        toggleBtn.classList.add('collapsed');
+    }
+}
+
+// ===== API ФУНКЦИИ =====
 async function updateSummary() {
     if (!currentUser) return;
     try {
@@ -131,7 +170,6 @@ async function updateSummary() {
             totalDaysSpan.textContent = safeNumber(stats.totalDays);
             totalEarnedSpan.textContent = formatMoney(stats.totalEarned);
 
-            // ФИКС: Правильная обработка бонусов
             const totalBonusValue = safeNumber(stats.totalBonus || stats.bonusTotal || 0);
             totalBonusSpan.textContent = formatMoney(totalBonusValue);
 
@@ -154,6 +192,7 @@ async function loadWorkdays() {
             const workdays = await res.json();
             if (!workdays.length) {
                 workdaysContainer.innerHTML = '<div class="empty-state">📭 Нет рабочих дней</div>';
+                initializeCollapsibleDays();
                 return;
             }
 
@@ -191,7 +230,6 @@ async function loadWorkdays() {
                 </div>
                 <div class="month-days">
                     ${group.days.map(day => {
-                    // ФИКС: Правильное отображение бонусов
                     const bonusHtml = (day.bonus && day.bonus > 0) ? `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
                     return `
                         <div class="workday-card">
@@ -212,6 +250,9 @@ async function loadWorkdays() {
             `;
                 workdaysContainer.appendChild(div);
             });
+
+            // Инициализируем сворачивание после загрузки данных
+            initializeCollapsibleDays();
         }
     } catch (e) {
         workdaysContainer.innerHTML = '<div class="loading">Ошибка загрузки</div>';
@@ -250,7 +291,6 @@ async function loadPayments() {
 async function addWorkday(workdayData) {
     if (!currentUser) return;
     try {
-        // ФИКС: Убедимся, что bonus всегда число
         workdayData.bonus = parseInt(workdayData.bonus) || 0;
 
         const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`, {
@@ -260,7 +300,6 @@ async function addWorkday(workdayData) {
         });
         if (res.ok) {
             const saved = await res.json();
-            // ФИКС: Правильное отображение бонуса в сообщении
             const bonusText = (saved.bonus && saved.bonus > 0) ? ` + ${formatMoney(saved.bonus)} допдоход` : '';
             showMessage(`День добавлен! +${formatMoney(saved.salary)}${bonusText}`);
             workdayForm.reset();
@@ -320,7 +359,6 @@ function initYearSelector() {
     const currentYear = new Date().getFullYear();
     reportYearSelect.innerHTML = '';
 
-    // Добавляем 5 лет: от текущего -2 до текущего +2
     for (let year = currentYear - 2; year <= currentYear + 2; year++) {
         const option = document.createElement('option');
         option.value = year;
@@ -333,16 +371,12 @@ function initYearSelector() {
 }
 
 function setupReportEventListeners() {
-    // Изменение типа отчета
     reportTypeSelect.addEventListener('change', function() {
         const isDetailedReport = this.value === 'monthly-detailed';
         monthField.style.display = isDetailedReport ? 'block' : 'none';
     });
 
-    // Генерация отчета
     generateReportBtn.addEventListener('click', generateReport);
-
-    // Экспорт отчета
     exportReportBtn.addEventListener('click', exportReport);
 }
 
@@ -413,9 +447,9 @@ function displayMonthlyReport(data, year) {
 
         html += `
             <div class="month-card ${hasData ? 'active' : ''}">
-                <div class="month-header">
+                <div class="month-card-header">
                     <span class="month-name">${monthName}</span>
-                    <span class="month-days">${monthReport.daysCount} дней</span>
+                    <span class="month-days-count">${monthReport.daysCount} дней</span>
                 </div>
                 <div class="month-stats">
                     <div class="stat-item">
@@ -568,7 +602,6 @@ function exportReport() {
     const reportTitleText = reportTitle.textContent;
     const reportContentHtml = reportContent.innerHTML;
 
-    // Создаем временный элемент для экспорта
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = `
         <h1>${reportTitleText}</h1>
@@ -578,7 +611,6 @@ function exportReport() {
         </div>
     `;
 
-    // Создаем окно для печати
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html>
@@ -602,7 +634,7 @@ function exportReport() {
     printWindow.print();
 }
 
-// ===== Обработчики событий =====
+// ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
 loginFormElement.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = new FormData(loginFormElement);
@@ -614,13 +646,6 @@ workdayForm.addEventListener('submit', async (e) => {
     const data = new FormData(workdayForm);
     const salary = data.get('salary') || DEFAULT_SALARY;
     const bonus = data.get('bonus') || 0;
-
-    console.log('Отправляемые данные:', {
-        workDate: data.get('workDate'),
-        description: data.get('description'),
-        salary: parseInt(salary),
-        bonus: parseInt(bonus)
-    });
 
     await addWorkday({
         workDate: data.get('workDate'),
@@ -651,107 +676,14 @@ tabs.forEach(tab => {
     });
 });
 
-// ===== Инициализация =====
+// ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
 });
 
-// ===== Глобальные функции =====
+// ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
 window.deleteWorkday = deleteWorkday;
 window.deletePayment = deletePayment;
 window.logout = logout;
-// Добавьте этот код в конец файла script.js
-
-function initializeCollapsibleDays() {
-    const workdaysContainer = document.getElementById('workdaysContainer');
-
-    // Создаем кнопку для сворачивания/разворачивания
-    if (!document.getElementById('toggleDaysBtn')) {
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'toggleDaysBtn';
-        toggleBtn.className = 'btn btn-secondary toggle-btn';
-        toggleBtn.innerHTML = '📂 Свернуть список дней';
-        toggleBtn.onclick = toggleWorkdaysList;
-
-        // Вставляем кнопку перед контейнером дней
-        workdaysContainer.parentNode.insertBefore(toggleBtn, workdaysContainer);
-    }
-
-    // Добавляем класс для анимации
-    workdaysContainer.classList.add('collapsible');
-}
-
-function toggleWorkdaysList() {
-    const workdaysContainer = document.getElementById('workdaysContainer');
-    const toggleBtn = document.getElementById('toggleDaysBtn');
-
-    if (workdaysContainer.classList.contains('collapsed')) {
-        // Разворачиваем
-        workdaysContainer.classList.remove('collapsed');
-        toggleBtn.innerHTML = '📂 Свернуть список дней';
-        toggleBtn.classList.remove('collapsed');
-    } else {
-        // Сворачиваем
-        workdaysContainer.classList.add('collapsed');
-        toggleBtn.innerHTML = '📁 Развернуть список дней';
-        toggleBtn.classList.add('collapsed');
-    }
-}
-
-// Обновите функцию loadWorkdays
-async function loadWorkdays() {
-    try {
-        const userId = localStorage.getItem('userId');
-        if (!userId) return;
-
-        const response = await fetch(`/api/workdays/user/${userId}`);
-        if (!response.ok) throw new Error('Ошибка загрузки дней');
-
-        const workdays = await response.json();
-        displayWorkdays(workdays);
-
-        // Инициализируем сворачивание после загрузки данных
-        initializeCollapsibleDays();
-
-    } catch (error) {
-        showMessage('Ошибка загрузки рабочих дней: ' + error.message, 'error');
-    }
-}
-
-// Обновите функцию displayWorkdays
-function displayWorkdays(workdays) {
-    const container = document.getElementById('workdaysContainer');
-
-    if (!workdays || workdays.length === 0) {
-        container.innerHTML = '<div class="no-data">Нет рабочих дней</div>';
-        return;
-    }
-
-    // Сортируем по дате (новые сверху)
-    workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
-
-    const workdaysList = workdays.map(day => {
-        const date = new Date(day.workDate).toLocaleDateString('ru-RU');
-        const salary = day.salary ? formatCurrency(day.salary) : '0 ₽';
-        const bonus = day.bonus ? formatCurrency(day.bonus) : '0 ₽';
-        const total = formatCurrency((day.salary || 0) + (day.bonus || 0));
-
-        return `
-            <div class="workday-item" data-date="${day.workDate}">
-                <div class="workday-header">
-                    <span class="workday-date">📅 ${date}</span>
-                    <span class="workday-total">${total}</span>
-                    <button class="btn-delete" onclick="deleteWorkday(${day.id})">❌</button>
-                </div>
-                <div class="workday-details">
-                    <div class="workday-detail">💰 Заработок: ${salary}</div>
-                    <div class="workday-detail">🎁 Допдоход: ${bonus}</div>
-                    ${day.description ? `<div class="workday-detail">📝 ${day.description}</div>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = workdaysList;
-}
+window.toggleWorkdaysList = toggleWorkdaysList;
