@@ -76,16 +76,19 @@
                         <label for="workDate">📅 Дата работы:</label>
                         <input type="date" id="workDate" name="workDate" required>
                     </div>
-
+                    <div class="form-group">
+                        <label for="description">📝 Описание:</label>
+                        <textarea id="description" name="description" rows="2" placeholder="Что делали..."></textarea>
+                    </div>
                     <div class="form-group">
                         <label for="salary">💰 Основной заработок (руб):</label>
                         <input type="number" id="salary" name="salary" placeholder="3500" min="0" step="100">
                         <small style="color: #666; font-size: 12px;">Оставьте пустым для 3500 руб</small>
                     </div>
-                    <div class="form-group bonus-section">
+                    <div class="form-group">
                         <label for="bonus">🎁 Дополнительный доход (руб):</label>
-                        <input type="number" id="bonus" name="bonus" placeholder="0" min="0" step="100" class="bonus-input">
-                        <small class="bonus-hint">Премии, бонусы, дополнительные выплаты</small>
+                        <input type="number" id="bonus" name="bonus" placeholder="0" min="0" step="100">
+                        <small style="color: #666; font-size: 12px;">Премии, бонусы, дополнительные выплаты</small>
                     </div>
                     <button type="submit" class="btn btn-success">💾 Сохранить день</button>
                 </form>
@@ -114,6 +117,7 @@
         <div class="tabs">
             <div class="tab active" data-tab="workdays">📅 Рабочие дни</div>
             <div class="tab" data-tab="payments">💵 Выплаты</div>
+            <div class="tab" data-tab="reports">📊 Отчеты</div>
         </div>
 
         <!-- Контент табов -->
@@ -131,6 +135,67 @@
                 <button id="loadPayments" class="btn btn-info">🔄 Обновить</button>
                 <div id="paymentsContainer" class="payments-container">
                     <div class="loading">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таб отчетов -->
+        <div class="tab-content" id="reportsTab">
+            <div class="reports-section">
+                <h3>📊 Финансовые отчеты</h3>
+
+                <!-- Выбор типа отчета -->
+                <div class="form-group">
+                    <label for="reportType">Тип отчета:</label>
+                    <select id="reportType" class="form-control">
+                        <option value="monthly">📅 Отчет по месяцам</option>
+                        <option value="annual">📊 Годовой отчет</option>
+                        <option value="monthly-detailed">📋 Детальный отчет по месяцу</option>
+                    </select>
+                </div>
+
+                <!-- Параметры отчета -->
+                <div class="report-params">
+                    <!-- Год -->
+                    <div class="form-group">
+                        <label for="reportYear">Год:</label>
+                        <select id="reportYear" class="form-control">
+                            <!-- Заполнится JavaScript -->
+                        </select>
+                    </div>
+
+                    <!-- Месяц (только для детального отчета) -->
+                    <div class="form-group" id="monthField" style="display: none;">
+                        <label for="reportMonth">Месяц:</label>
+                        <select id="reportMonth" class="form-control">
+                            <option value="1">Январь</option>
+                            <option value="2">Февраль</option>
+                            <option value="3">Март</option>
+                            <option value="4">Апрель</option>
+                            <option value="5">Май</option>
+                            <option value="6">Июнь</option>
+                            <option value="7">Июль</option>
+                            <option value="8">Август</option>
+                            <option value="9">Сентябрь</option>
+                            <option value="10">Октябрь</option>
+                            <option value="11">Ноябрь</option>
+                            <option value="12">Декабрь</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Кнопка генерации отчета -->
+                <button id="generateReport" class="btn btn-info">🔄 Сформировать отчет</button>
+
+                <!-- Контейнер для отчета -->
+                <div id="reportContainer" class="report-container" style="display: none;">
+                    <div class="report-header">
+                        <h4 id="reportTitle"></h4>
+                        <button id="exportReport" class="btn btn-success">📥 Экспорт</button>
+                    </div>
+                    <div id="reportContent" class="report-content">
+                        <!-- Сюда будет вставляться отчет -->
+                    </div>
                 </div>
             </div>
         </div>
