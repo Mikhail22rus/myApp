@@ -385,32 +385,6 @@ input:focus, textarea:focus, select:focus {
     border-bottom: none;
 }
 
-/* Стили для секции бонусов */
-.bonus-section {
-    background: #fff3cd;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid #ffc107;
-    margin: 15px 0;
-}
-
-.bonus-section label {
-    color: #856404;
-    font-weight: bold;
-}
-
-.bonus-input {
-    border: 2px solid #ffc107 !important;
-    background: #fffdf6 !important;
-}
-
-.bonus-hint {
-    color: #856404;
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-}
-
 /* Планшеты и маленькие ноутбуки */
 @media (min-width: 768px) {
     body {
