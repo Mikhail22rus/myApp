@@ -1,5 +1,6 @@
 package ru.kata.project.myprila.service;
 
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.kata.project.myprila.entity.SalaryPayment;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class WorkDayService {
 
     @Autowired
@@ -279,11 +281,28 @@ public class WorkDayService {
         }
 
         // Геттеры
-        public int getTotalDays() { return totalDays; }
-        public BigDecimal getTotalEarned() { return totalEarned; }
-        public BigDecimal getTotalSalary() { return totalSalary; }
-        public BigDecimal getTotalBonus() { return totalBonus; }
-        public BigDecimal getTotalPaid() { return totalPaid; }
-        public BigDecimal getSalaryBalance() { return salaryBalance; }
+        public int getTotalDays() {
+            return totalDays;
+        }
+
+        public BigDecimal getTotalEarned() {
+            return totalEarned;
+        }
+
+        public BigDecimal getTotalSalary() {
+            return totalSalary;
+        }
+
+        public BigDecimal getTotalBonus() {
+            return totalBonus;
+        }
+
+        public BigDecimal getTotalPaid() {
+            return totalPaid;
+        }
+
+        public BigDecimal getSalaryBalance() {
+            return salaryBalance;
+        }
     }
 }
