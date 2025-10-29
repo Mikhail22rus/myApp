@@ -82,7 +82,7 @@
 
         .summary-numbers {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
         }
 
@@ -91,14 +91,14 @@
         }
 
         .summary-value {
-            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
             font-weight: bold;
             margin-bottom: 5px;
             word-break: break-word;
         }
 
         .summary-label {
-            font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+            font-size: clamp(0.7rem, 2vw, 0.8rem);
             opacity: 0.9;
         }
 
@@ -269,7 +269,7 @@
             justify-content: flex-end;
         }
 
-        .workday-salary, .payment-amount {
+        .workday-salary, .payment-amount, .workday-bonus {
             color: white;
             padding: 4px 8px;
             border-radius: 15px;
@@ -280,6 +280,10 @@
 
         .workday-salary {
             background: #4CAF50;
+        }
+
+        .workday-bonus {
+            background: #FF9800;
         }
 
         .payment-amount {
@@ -399,7 +403,7 @@
             }
 
             .summary-numbers {
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(5, 1fr);
                 gap: 15px;
             }
 
@@ -495,8 +499,6 @@
             </div>
             <button type="submit" class="btn btn-success">Войти</button>
         </form>
-
-
     </div>
 
     <!-- Основной контент -->
@@ -519,7 +521,11 @@
                 </div>
                 <div class="summary-item">
                     <div class="summary-value" id="totalEarned">0 ₽</div>
-                    <div class="summary-label">Всего заработано</div>
+                    <div class="summary-label">Заработок</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="totalBonus">0 ₽</div>
+                    <div class="summary-label">Допдоход</div>
                 </div>
                 <div class="summary-item">
                     <div class="summary-value" id="totalPaid">0 ₽</div>
@@ -549,6 +555,11 @@
                         <label for="salary">💰 Сумма заработка (руб):</label>
                         <input type="number" id="salary" name="salary" placeholder="3500" min="0" step="100">
                         <small style="color: #666; font-size: 12px;">Оставьте пустым для 3500 руб</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="bonus">🎁 Допдоход (руб):</label>
+                        <input type="number" id="bonus" name="bonus" placeholder="0" min="0" step="100">
+                        <small style="color: #666; font-size: 12px;">Дополнительный доход (премии, бонусы)</small>
                     </div>
                     <button type="submit" class="btn btn-success">💾 Сохранить день</button>
                 </form>
@@ -619,6 +630,7 @@
     const paymentsContainer = document.getElementById('paymentsContainer');
     const totalDaysSpan = document.getElementById('totalDays');
     const totalEarnedSpan = document.getElementById('totalEarned');
+    const totalBonusSpan = document.getElementById('totalBonus');
     const totalPaidSpan = document.getElementById('totalPaid');
     const salaryBalanceSpan = document.getElementById('salaryBalance');
     const tabs = document.querySelectorAll('.tab');
@@ -720,6 +732,7 @@
                 const stats = await res.json();
                 totalDaysSpan.textContent = safeNumber(stats.totalDays);
                 totalEarnedSpan.textContent = formatMoney(stats.totalEarned);
+                totalBonusSpan.textContent = formatMoney(stats.totalBonus || 0);
                 totalPaidSpan.textContent = formatMoney(stats.totalPaid);
                 const balance = safeNumber(stats.salaryBalance);
                 salaryBalanceSpan.textContent = formatMoney(balance);
@@ -750,9 +763,16 @@
                 workdays.forEach(day => {
                     const date = new Date(day.workDate);
                     const key = `${date.getFullYear()}-${date.getMonth()}`;
-                    if (!monthGroups[key]) monthGroups[key] = {monthName: `${monthNames[date.getMonth()]} ${date.getFullYear()}`, days: [], total:0, daysCount:0};
+                    if (!monthGroups[key]) monthGroups[key] = {
+                        monthName: `${monthNames[date.getMonth()]} ${date.getFullYear()}`,
+                        days: [],
+                        totalSalary: 0,
+                        totalBonus: 0,
+                        daysCount: 0
+                    };
                     monthGroups[key].days.push(day);
-                    monthGroups[key].total += day.salary;
+                    monthGroups[key].totalSalary += day.salary;
+                    monthGroups[key].totalBonus += (day.bonus || 0);
                     monthGroups[key].daysCount++;
                 });
 
@@ -761,23 +781,30 @@
                 sortedGroups.forEach(([_, group]) => {
                     const div = document.createElement('div');
                     div.className = 'month-group';
+                    const totalIncome = group.totalSalary + group.totalBonus;
                     div.innerHTML = `
                     <div class="month-header">
                         <span>${group.monthName}</span>
-                        <span class="month-total">${group.daysCount} дней • ${formatMoney(group.total)}</span>
+                        <span class="month-total">${group.daysCount} дней • ${formatMoney(totalIncome)}</span>
                     </div>
                     <div class="month-days">
-                        ${group.days.map(day => `
+                        ${group.days.map(day => {
+                        const bonusHtml = day.bonus ? `<span class="workday-bonus">+${formatMoney(day.bonus)}</span>` : '';
+                        return `
                             <div class="workday-card">
                                 <div class="workday-info">
-                                    <div class="workday-date">📅 ${formatDate(day.workDate)} <span class="workday-salary">${formatMoney(day.salary)}</span></div>
+                                    <div class="workday-date">
+                                        📅 ${formatDate(day.workDate)}
+                                        <span class="workday-salary">${formatMoney(day.salary)}</span>
+                                        ${bonusHtml}
+                                    </div>
                                     <div class="workday-description">${day.description || 'Рабочий день'}</div>
                                 </div>
                                 <div class="workday-actions">
                                     <button class="btn btn-danger" onclick="deleteWorkday(${day.id})">🗑️ Удалить</button>
                                 </div>
                             </div>
-                        `).join('')}
+                        `}).join('')}
                     </div>
                 `;
                     workdaysContainer.appendChild(div);
@@ -827,7 +854,8 @@
             });
             if (res.ok) {
                 const saved = await res.json();
-                showMessage(`День добавлен! +${formatMoney(saved.salary)}`);
+                const bonusText = saved.bonus ? ` + ${formatMoney(saved.bonus)} допдоход` : '';
+                showMessage(`День добавлен! +${formatMoney(saved.salary)}${bonusText}`);
                 workdayForm.reset();
                 document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
                 loadWorkdays();
@@ -886,10 +914,12 @@
         e.preventDefault();
         const data = new FormData(workdayForm);
         const salary = data.get('salary') || DEFAULT_SALARY;
+        const bonus = data.get('bonus') || 0;
         await addWorkday({
             workDate: data.get('workDate'),
             description: data.get('description'),
-            salary: parseInt(salary)
+            salary: parseInt(salary),
+            bonus: parseInt(bonus)
         });
     });
 
@@ -925,7 +955,5 @@
     window.deletePayment = deletePayment;
     window.logout = logout;
 </script>
-
-
 </body>
 </html>
