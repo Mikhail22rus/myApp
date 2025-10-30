@@ -120,6 +120,181 @@ function safeNumber(value) {
     return isNaN(num) ? 0 : num;
 }
 
+// ===== ФИНАНСОВАЯ СВОДКА ПО МЕСЯЦАМ С НАКОПЛЕННЫМ ДОЛГОМ =====
+async function updateSummary() {
+    if (!currentUser) return;
+    try {
+        // Загружаем данные для помесячной группировки с накопленным долгом
+        const monthlyData = await loadMonthlySummary();
+        displayMonthlySummary(monthlyData);
+
+    } catch (error) {
+        console.error('Ошибка загрузки статистики:', error);
+    }
+}
+
+async function loadMonthlySummary() {
+    if (!currentUser) return [];
+
+    try {
+        // Получаем все рабочие дни
+        const workdaysRes = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
+        const workdays = await workdaysRes.json();
+
+        // Получаем все выплаты
+        const paymentsRes = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
+        const payments = await paymentsRes.json();
+
+        return calculateMonthlySummary(workdays, payments);
+    } catch (error) {
+        console.error('Ошибка загрузки данных для сводки:', error);
+        return [];
+    }
+}
+
+function calculateMonthlySummary(workdays, payments) {
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+    // Группируем рабочие дни по месяцам
+    const workdaysByMonth = {};
+    workdays.forEach(day => {
+        const date = new Date(day.workDate);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const key = `${year}-${month}`;
+
+        if (!workdaysByMonth[key]) {
+            workdaysByMonth[key] = {
+                year: year,
+                month: month,
+                monthName: `${monthNames[month]} ${year}`,
+                workdays: [],
+                totalSalary: 0,
+                totalBonus: 0,
+                totalIncome: 0,
+                daysCount: 0
+            };
+        }
+
+        workdaysByMonth[key].workdays.push(day);
+        workdaysByMonth[key].totalSalary += day.salary || 0;
+        workdaysByMonth[key].totalBonus += day.bonus || 0;
+        workdaysByMonth[key].totalIncome += (day.salary || 0) + (day.bonus || 0);
+        workdaysByMonth[key].daysCount++;
+    });
+
+    // Группируем выплаты по месяцам
+    const paymentsByMonth = {};
+    payments.forEach(payment => {
+        const date = new Date(payment.paymentDate);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const key = `${year}-${month}`;
+
+        if (!paymentsByMonth[key]) {
+            paymentsByMonth[key] = {
+                totalPaid: 0,
+                payments: []
+            };
+        }
+
+        paymentsByMonth[key].totalPaid += payment.amount || 0;
+        paymentsByMonth[key].payments.push(payment);
+    });
+
+    // Собираем итоговые данные по месяцам с накоплением долга
+    const monthlyData = [];
+    let cumulativeBalance = 0; // Накопленный долг
+
+    // Сортируем месяцы по дате (от старых к новым)
+    const sortedMonths = Object.keys(workdaysByMonth).sort();
+
+    sortedMonths.forEach(key => {
+        const workMonth = workdaysByMonth[key];
+        const paymentMonth = paymentsByMonth[key] || { totalPaid: 0, payments: [] };
+
+        // Заработок за месяц (только зарплата, без бонусов)
+        const monthlySalary = workMonth.totalSalary;
+
+        // Выплаты за месяц
+        const monthlyPaid = paymentMonth.totalPaid;
+
+        // Баланс за месяц (зарплата - выплаты)
+        const monthlyBalance = monthlySalary - monthlyPaid;
+
+        // Накопленный долг с учетом предыдущих месяцев
+        cumulativeBalance += monthlyBalance;
+
+        monthlyData.push({
+            ...workMonth,
+            totalPaid: monthlyPaid,
+            monthlyBalance: monthlyBalance,
+            cumulativeBalance: cumulativeBalance,
+            payments: paymentMonth.payments
+        });
+    });
+
+    return monthlyData.reverse(); // Возвращаем от новых к старым
+}
+
+function displayMonthlySummary(monthlyData) {
+    const summaryContainer = document.querySelector('.summary-numbers');
+
+    if (!monthlyData || monthlyData.length === 0) {
+        summaryContainer.innerHTML = `
+            <div class="summary-item" style="grid-column: 1 / -1;">
+                <div class="summary-value">-</div>
+                <div class="summary-label">Нет данных за периоды</div>
+            </div>
+        `;
+        return;
+    }
+
+    // Показываем только последние 3 месяца или все, если меньше
+    const displayMonths = monthlyData.slice(0, 3);
+
+    let html = '';
+
+    displayMonths.forEach(month => {
+        const balanceClass = month.cumulativeBalance > 0 ? 'balance-positive' :
+            month.cumulativeBalance < 0 ? 'balance-negative' : '';
+
+        html += `
+            <div class="summary-item">
+                <div class="summary-value" style="font-size: 0.9rem; margin-bottom: 2px;">${month.monthName}</div>
+                <div class="summary-value">${formatMoney(month.totalIncome)}</div>
+                <div class="summary-label">
+                    ${month.daysCount} дней • 
+                    <span class="${balanceClass}">${formatMoney(month.cumulativeBalance)}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    // Если есть больше 3 месяцев, показываем общую сводку
+    if (monthlyData.length > 3) {
+        const totalMonths = monthlyData.length;
+        const totalIncome = monthlyData.reduce((sum, month) => sum + month.totalIncome, 0);
+        const currentBalance = monthlyData[0].cumulativeBalance; // Баланс последнего месяца
+
+        html += `
+            <div class="summary-item">
+                <div class="summary-value" style="font-size: 0.9rem; margin-bottom: 2px;">Всего (${totalMonths} мес)</div>
+                <div class="summary-value">${formatMoney(totalIncome)}</div>
+                <div class="summary-label">
+                    Итоговый баланс: 
+                    <span class="${currentBalance > 0 ? 'balance-positive' : currentBalance < 0 ? 'balance-negative' : ''}">
+                        ${formatMoney(currentBalance)}
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+
+    summaryContainer.innerHTML = html;
+}
+
 // ===== СВОРАЧИВАЕМЫЙ СПИСОК ДНЕЙ =====
 function initializeCollapsibleDays() {
     const workdaysContainer = document.getElementById('workdaysContainer');
@@ -176,28 +351,6 @@ function toggleWorkdaysList() {
 }
 
 // ===== API ФУНКЦИИ =====
-async function updateSummary() {
-    if (!currentUser) return;
-    try {
-        const res = await fetch(`${API_BASE_URL}/workdays/statistics?userId=${currentUser.userId}`);
-        if (res.ok) {
-            const stats = await res.json();
-            totalDaysSpan.textContent = safeNumber(stats.totalDays);
-            totalEarnedSpan.textContent = formatMoney(stats.totalEarned);
-
-            const totalBonusValue = safeNumber(stats.totalBonus || stats.bonusTotal || 0);
-            totalBonusSpan.textContent = formatMoney(totalBonusValue);
-
-            totalPaidSpan.textContent = formatMoney(stats.totalPaid);
-            const balance = safeNumber(stats.salaryBalance);
-            salaryBalanceSpan.textContent = formatMoney(balance);
-            salaryBalanceSpan.className = `summary-value ${balance > 0 ? 'balance-positive' : balance < 0 ? 'balance-negative' : ''}`;
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки статистики:', error);
-    }
-}
-
 async function loadWorkdays() {
     if (!currentUser) return;
     try {
@@ -211,60 +364,9 @@ async function loadWorkdays() {
                 return;
             }
 
-            workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
-
-            const monthGroups = {};
-            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-
-            workdays.forEach(day => {
-                const date = new Date(day.workDate);
-                const key = `${date.getFullYear()}-${date.getMonth()}`;
-                if (!monthGroups[key]) monthGroups[key] = {
-                    monthName: `${monthNames[date.getMonth()]} ${date.getFullYear()}`,
-                    days: [],
-                    totalSalary: 0,
-                    totalBonus: 0,
-                    daysCount: 0
-                };
-                monthGroups[key].days.push(day);
-                monthGroups[key].totalSalary += day.salary;
-                monthGroups[key].totalBonus += (day.bonus || 0);
-                monthGroups[key].daysCount++;
-            });
-
-            const sortedGroups = Object.entries(monthGroups).sort(([a],[b]) => b.localeCompare(a));
-            workdaysContainer.innerHTML = '';
-            sortedGroups.forEach(([_, group]) => {
-                const div = document.createElement('div');
-                div.className = 'month-group';
-                const totalIncome = group.totalSalary + group.totalBonus;
-                div.innerHTML = `
-                <div class="month-header">
-                    <span>${group.monthName}</span>
-                    <span class="month-total">${group.daysCount} дней • ${formatMoney(totalIncome)}</span>
-                </div>
-                <div class="month-days">
-                    ${group.days.map(day => {
-                    const bonusHtml = (day.bonus && day.bonus > 0) ? `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
-                    return `
-                        <div class="workday-card">
-                            <div class="workday-info">
-                                <div class="workday-date">
-                                    📅 ${formatDate(day.workDate)}
-                                    <span class="workday-salary">${formatMoney(day.salary)}</span>
-                                    ${bonusHtml}
-                                </div>
-                                <div class="workday-description">${day.description || 'Рабочий день'}</div>
-                            </div>
-                            <div class="workday-actions">
-                                <button class="btn btn-danger" onclick="deleteWorkday(${day.id})">🗑️ Удалить</button>
-                            </div>
-                        </div>
-                    `}).join('')}
-                </div>
-            `;
-                workdaysContainer.appendChild(div);
-            });
+            // Получаем данные для отображения баланса
+            const monthlyData = await loadMonthlySummary();
+            displayWorkdaysWithBalance(workdays, monthlyData);
 
             // Инициализируем сворачивание после загрузки данных
             initializeCollapsibleDays();
@@ -272,6 +374,88 @@ async function loadWorkdays() {
     } catch (e) {
         workdaysContainer.innerHTML = '<div class="loading">Ошибка загрузки</div>';
     }
+}
+
+function displayWorkdaysWithBalance(workdays, monthlyData) {
+    const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+    // Создаем карту балансов по месяцам для быстрого доступа
+    const balanceMap = {};
+    monthlyData.forEach(month => {
+        const key = `${month.year}-${month.month}`;
+        balanceMap[key] = month.cumulativeBalance;
+    });
+
+    workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+
+    const monthGroups = {};
+
+    workdays.forEach(day => {
+        const date = new Date(day.workDate);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const key = `${year}-${month}`;
+
+        if (!monthGroups[key]) {
+            const monthBalance = balanceMap[key] || 0;
+            monthGroups[key] = {
+                monthName: `${monthNames[month]} ${year}`,
+                days: [],
+                totalSalary: 0,
+                totalBonus: 0,
+                daysCount: 0,
+                cumulativeBalance: monthBalance
+            };
+        }
+
+        monthGroups[key].days.push(day);
+        monthGroups[key].totalSalary += day.salary;
+        monthGroups[key].totalBonus += (day.bonus || 0);
+        monthGroups[key].daysCount++;
+    });
+
+    const sortedGroups = Object.entries(monthGroups).sort(([a],[b]) => b.localeCompare(a));
+    workdaysContainer.innerHTML = '';
+
+    sortedGroups.forEach(([_, group]) => {
+        const div = document.createElement('div');
+        div.className = 'month-group';
+        const totalIncome = group.totalSalary + group.totalBonus;
+        const balanceClass = group.cumulativeBalance > 0 ? 'balance-positive' :
+            group.cumulativeBalance < 0 ? 'balance-negative' : '';
+
+        div.innerHTML = `
+            <div class="month-header">
+                <span>${group.monthName}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span class="month-total">${group.daysCount} дней • ${formatMoney(totalIncome)}</span>
+                    <span style="font-size: 0.8rem; opacity: 0.9;">
+                        Баланс: <span class="${balanceClass}">${formatMoney(group.cumulativeBalance)}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="month-days">
+                ${group.days.map(day => {
+            const bonusHtml = (day.bonus && day.bonus > 0) ? `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
+            return `
+                    <div class="workday-card">
+                        <div class="workday-info">
+                            <div class="workday-date">
+                                📅 ${formatDate(day.workDate)}
+                                <span class="workday-salary">${formatMoney(day.salary)}</span>
+                                ${bonusHtml}
+                            </div>
+                            <div class="workday-description">${day.description || 'Рабочий день'}</div>
+                        </div>
+                        <div class="workday-actions">
+                            <button class="btn btn-danger" onclick="deleteWorkday(${day.id})">🗑️ Удалить</button>
+                        </div>
+                    </div>
+                `}).join('')}
+            </div>
+        `;
+        workdaysContainer.appendChild(div);
+    });
 }
 
 async function loadPayments() {
