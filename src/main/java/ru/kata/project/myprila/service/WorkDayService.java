@@ -219,40 +219,69 @@ public class WorkDayService {
     public WorkDayStatistics getStatistics(Long userId) {
         validateUserExists(userId);
 
-        List<WorkDay> userDays = workDayRepository.findByUserId(userId);
-        List<SalaryPayment> userPayments = salaryPaymentRepository.findByUserId(userId);
+        LocalDate now = LocalDate.now();
+        LocalDate startOfMonth = now.withDayOfMonth(1);
+        LocalDate endOfMonth = now.withDayOfMonth(now.lengthOfMonth());
 
-        int totalDays = userDays.size();
+        // 📊 Данные текущего месяца
+        List<WorkDay> currentMonthDays = workDayRepository.findByWorkDateBetween(startOfMonth, endOfMonth)
+                .stream()
+                .filter(day -> day.getUser().getId().equals(userId))
+                .toList();
 
-        // ✅ ЗАРАБОТОК (только зарплата, без бонусов)
-        BigDecimal totalSalary = userDays.stream()
-                .map(day -> day.getSalary() != null ? day.getSalary() : ZERO)
-                .reduce(ZERO, BigDecimal::add);
+        List<SalaryPayment> currentMonthPayments = salaryPaymentRepository.findByUserIdAndPaymentDateBetween(
+                userId,
+                startOfMonth.atStartOfDay(),
+                endOfMonth.atTime(23, 59, 59)
+        );
 
-        // ✅ БОНУСЫ (отдельно, не учитываются в долге)
-        BigDecimal totalBonus = userDays.stream()
-                .map(day -> day.getBonus() != null ? day.getBonus() : ZERO)
-                .reduce(ZERO, BigDecimal::add);
+        // 📊 Данные всех прошлых месяцев (для долга)
+        List<WorkDay> allUserDays = workDayRepository.findByUserId(userId);
+        List<SalaryPayment> allUserPayments = salaryPaymentRepository.findByUserId(userId);
 
-        // ✅ ОБЩИЙ ДОХОД (для отображения)
+        BigDecimal totalSalaryBefore = allUserDays.stream()
+                .filter(day -> day.getWorkDate().isBefore(startOfMonth))
+                .map(day -> day.getSalary() != null ? day.getSalary() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalPaidBefore = allUserPayments.stream()
+                .filter(p -> p.getPaymentDate().toLocalDate().isBefore(startOfMonth))
+                .map(SalaryPayment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 💰 Долг из прошлого месяца
+        BigDecimal carriedDebt = totalSalaryBefore.subtract(totalPaidBefore);
+        if (carriedDebt.compareTo(BigDecimal.ZERO) < 0) {
+            carriedDebt = BigDecimal.ZERO; // Если переплата — долг не переносим
+        }
+
+        // ✅ Зарплата и бонусы за текущий месяц
+        BigDecimal totalSalary = currentMonthDays.stream()
+                .map(day -> day.getSalary() != null ? day.getSalary() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalBonus = currentMonthDays.stream()
+                .map(day -> day.getBonus() != null ? day.getBonus() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal totalEarned = totalSalary.add(totalBonus);
 
-        BigDecimal totalPaid = userPayments.stream()
+        BigDecimal totalPaid = currentMonthPayments.stream()
                 .map(SalaryPayment::getAmount)
-                .reduce(ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // ✅ БАЛАНС (только зарплата минус выплаты, бонусы не учитываются)
-        BigDecimal salaryBalance = totalSalary.subtract(totalPaid);
+        // 🧾 Итоговый баланс (с учётом долга)
+        BigDecimal salaryBalance = totalSalary.add(carriedDebt).subtract(totalPaid);
 
-        return new WorkDayStatistics(totalDays, totalEarned, totalSalary, totalBonus, totalPaid, salaryBalance);
+        return new WorkDayStatistics(
+                currentMonthDays.size(),
+                totalEarned,
+                totalSalary,
+                totalBonus,
+                totalPaid,
+                salaryBalance
+        );
     }
-
-    public BigDecimal getSalaryBalance(Long userId) {
-        validateUserExists(userId);
-        WorkDayStatistics stats = getStatistics(userId);
-        return stats.getSalaryBalance();
-    }
-
     // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
 
     private User validateUserExists(Long userId) {
