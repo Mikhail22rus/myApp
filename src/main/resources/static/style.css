@@ -947,6 +947,18 @@ input:focus, textarea:focus, select:focus {
     }
 }
 
+
+
+/* Для компьютеров - уменьшаем цифры */
+@media (min-width: 1024px) {
+    .summary-value {
+        font-size: 1.8rem;  /* Уменьшили с 2.5rem */
+    }
+
+    .summary-label {
+        font-size: 0.9rem;  /* Уменьшили с 1.2rem */
+    }
+}
 /* Планшеты */
 @media (min-width: 769px) and (max-width: 1023px) {
     .container {
