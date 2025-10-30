@@ -282,6 +282,11 @@ public class WorkDayService {
                 salaryBalance
         );
     }
+
+    public BigDecimal getSalaryBalance(Long userId) {
+        // вызываем нестатический метод getStatistics для данного пользователя
+        return getStatistics(userId).getSalaryBalance();
+    }
     // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
 
     private User validateUserExists(Long userId) {
@@ -308,8 +313,9 @@ public class WorkDayService {
             this.totalPaid = totalPaid;
             this.salaryBalance = salaryBalance;
         }
+        // В WorkDayService
 
-        // Геттеры
+
         public int getTotalDays() {
             return totalDays;
         }
