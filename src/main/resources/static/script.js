@@ -33,6 +33,9 @@ const reportTitle = document.getElementById('reportTitle');
 const reportContent = document.getElementById('reportContent');
 const exportReportBtn = document.getElementById('exportReport');
 
+// Переменные для управления состоянием
+let isWorkdaysListCollapsed = true;
+
 // ===== АВТОРИЗАЦИЯ =====
 async function login(username, password) {
     try {
@@ -124,10 +127,8 @@ function safeNumber(value) {
 async function updateSummary() {
     if (!currentUser) return;
     try {
-        // Загружаем данные для расчета текущего месяца с переносом долга
         const currentMonthData = await loadCurrentMonthSummary();
         displayCurrentMonthSummary(currentMonthData);
-
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
         showMessage('Ошибка загрузки финансовой сводки', 'error');
@@ -138,11 +139,9 @@ async function loadCurrentMonthSummary() {
     if (!currentUser) return null;
 
     try {
-        // Получаем все рабочие дни
         const workdaysRes = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
         const workdays = await workdaysRes.json();
 
-        // Получаем все выплаты
         const paymentsRes = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
         const payments = await paymentsRes.json();
 
@@ -160,28 +159,22 @@ function calculateCurrentMonthSummary(workdays, payments) {
     const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
-    // Фильтруем рабочие дни текущего месяца
     const currentMonthWorkdays = workdays.filter(day => {
         const date = new Date(day.workDate);
         return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
     });
 
-    // Фильтруем выплаты текущего месяца
     const currentMonthPayments = payments.filter(payment => {
         const date = new Date(payment.paymentDate);
         return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
     });
 
-    // Рассчитываем показатели текущего месяца
     const currentMonthSalary = currentMonthWorkdays.reduce((sum, day) => sum + (day.salary || 0), 0);
     const currentMonthBonus = currentMonthWorkdays.reduce((sum, day) => sum + (day.bonus || 0), 0);
     const currentMonthIncome = currentMonthSalary + currentMonthBonus;
     const currentMonthPaid = currentMonthPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
 
-    // Рассчитываем долг с предыдущих месяцев
     const previousDebt = calculatePreviousMonthsDebt(workdays, payments, currentYear, currentMonth);
-
-    // Текущий баланс (долг) = предыдущий долг + (зарплата текущего месяца - выплаты текущего месяца)
     const currentBalance = previousDebt + (currentMonthSalary - currentMonthPaid);
 
     return {
@@ -199,24 +192,20 @@ function calculateCurrentMonthSummary(workdays, payments) {
 function calculatePreviousMonthsDebt(workdays, payments, currentYear, currentMonth) {
     let totalDebt = 0;
 
-    // Проходим по всем месяцам до текущего
     for (let year = 2020; year <= currentYear; year++) {
         const maxMonth = (year === currentYear) ? currentMonth - 1 : 11;
 
         for (let month = 0; month <= maxMonth; month++) {
-            // Фильтруем рабочие дни месяца
             const monthWorkdays = workdays.filter(day => {
                 const date = new Date(day.workDate);
                 return date.getFullYear() === year && date.getMonth() === month;
             });
 
-            // Фильтруем выплаты месяца
             const monthPayments = payments.filter(payment => {
                 const date = new Date(payment.paymentDate);
                 return date.getFullYear() === year && date.getMonth() === month;
             });
 
-            // Рассчитываем баланс месяца (только зарплата - выплаты)
             const monthSalary = monthWorkdays.reduce((sum, day) => sum + (day.salary || 0), 0);
             const monthPaid = monthPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
             const monthBalance = monthSalary - monthPaid;
@@ -230,7 +219,6 @@ function calculatePreviousMonthsDebt(workdays, payments, currentYear, currentMon
 
 function displayCurrentMonthSummary(data) {
     if (!data) {
-        // Если нет данных, показываем заглушку
         totalDaysSpan.textContent = '0';
         totalEarnedSpan.textContent = '0 ₽';
         totalBonusSpan.textContent = '0 ₽';
@@ -244,11 +232,9 @@ function displayCurrentMonthSummary(data) {
     totalBonusSpan.textContent = formatMoney(data.totalBonus);
     totalPaidSpan.textContent = formatMoney(data.totalPaid);
 
-    // Показываем текущий баланс (долг)
     salaryBalanceSpan.textContent = formatMoney(data.currentBalance);
     salaryBalanceSpan.className = `summary-value ${data.currentBalance > 0 ? 'balance-positive' : data.currentBalance < 0 ? 'balance-negative' : ''}`;
 
-    // Обновляем заголовок с названием месяца
     document.querySelector('.summary-card h2').textContent = `📊 ${data.monthName}`;
 }
 
@@ -257,53 +243,47 @@ function initializeCollapsibleDays() {
     const workdaysContainer = document.getElementById('workdaysContainer');
     const loadWorkdaysBtn = document.getElementById('loadWorkdays');
 
-    // Создаем контейнер для кнопок
     let controlsContainer = document.getElementById('workdaysControls');
     if (!controlsContainer) {
         controlsContainer = document.createElement('div');
         controlsContainer.id = 'workdaysControls';
         controlsContainer.className = 'workdays-controls';
 
-        // Вставляем контейнер перед контейнером дней
         const workdaysList = workdaysContainer.parentNode;
         workdaysList.insertBefore(controlsContainer, workdaysContainer);
-
-        // Перемещаем кнопку "Обновить" в контейнер
         controlsContainer.appendChild(loadWorkdaysBtn);
     }
 
-    // Проверяем, есть ли уже кнопка сворачивания
     if (!document.getElementById('toggleDaysBtn')) {
-        // Создаем кнопку для сворачивания/разворачивания
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'toggleDaysBtn';
         toggleBtn.type = 'button';
         toggleBtn.className = 'btn btn-info toggle-btn';
-        toggleBtn.innerHTML = '📂 Свернуть список дней';
+        toggleBtn.innerHTML = '📁 Развернуть список дней';
         toggleBtn.onclick = toggleWorkdaysList;
 
-        // Вставляем кнопку в контейнер управления
         controlsContainer.appendChild(toggleBtn);
     }
 
-    // Добавляем класс для анимации
-    workdaysContainer.classList.add('collapsible');
+    // Устанавливаем начальное состояние - СВЕРНУТ
+    workdaysContainer.classList.add('collapsible', 'collapsed');
+    isWorkdaysListCollapsed = true;
 }
 
 function toggleWorkdaysList() {
     const workdaysContainer = document.getElementById('workdaysContainer');
     const toggleBtn = document.getElementById('toggleDaysBtn');
 
-    if (workdaysContainer.classList.contains('collapsed')) {
+    if (isWorkdaysListCollapsed) {
         // Разворачиваем
         workdaysContainer.classList.remove('collapsed');
         toggleBtn.innerHTML = '📂 Свернуть список дней';
-        toggleBtn.classList.remove('collapsed');
+        isWorkdaysListCollapsed = false;
     } else {
         // Сворачиваем
         workdaysContainer.classList.add('collapsed');
         toggleBtn.innerHTML = '📁 Развернуть список дней';
-        toggleBtn.classList.add('collapsed');
+        isWorkdaysListCollapsed = true;
     }
 }
 
