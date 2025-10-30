@@ -61,7 +61,7 @@ h1 {
     color: #1976d2;
 }
 
-/* Финансовая сводка - исправленная */
+/* Финансовая сводка */
 .summary-card {
     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
     color: white;
@@ -80,8 +80,8 @@ h1 {
 
 .summary-numbers {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
     width: 100%;
 }
 
@@ -92,19 +92,15 @@ h1 {
 }
 
 .summary-value {
-    font-size: clamp(1.1rem, 3vw, 1.6rem);
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
     font-weight: bold;
     margin-bottom: 5px;
     word-break: break-word;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .summary-label {
     font-size: clamp(0.7rem, 2vw, 0.8rem);
     opacity: 0.9;
-    line-height: 1.2;
 }
 
 .balance-positive {
