@@ -92,14 +92,14 @@ h1 {
 }
 
 .summary-value {
-    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-size: clamp(1.6rem, 4vw, 2rem);
     font-weight: bold;
     margin-bottom: 5px;
     word-break: break-word;
 }
 
 .summary-label {
-    font-size: clamp(0.7rem, 2vw, 0.8rem);
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
     opacity: 0.9;
 }
 
@@ -778,7 +778,7 @@ input:focus, textarea:focus, select:focus {
     }
 
     .summary-value {
-        font-size: 1rem;
+        font-size: 1.4rem;
     }
 
     .summary-label {
@@ -858,7 +858,7 @@ input:focus, textarea:focus, select:focus {
     }
 
     .summary-value {
-        font-size: 0.9rem;
+        font-size: 1.2rem;
     }
 
     .summary-label {
