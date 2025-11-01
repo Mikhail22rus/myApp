@@ -328,14 +328,12 @@ async function loadWorkdays() {
             });
 
             // СОРТИРУЕМ месяцы по убыванию (новые сверху)
-            const sortedGroups = Object.entries(monthGroups).sort(([aKey, aGroup], [bKey, bGroup]) => {
-                // Сначала по году (убывание)
-                if (bGroup.year !== aGroup.year) {
-                    return bGroup.year - aGroup.year;
-                }
-                // Потом по месяцу (убывание)
-                return bGroup.month - aGroup.month;
-            });
+            const sortedGroups = Object.entries(monthGroups)
+                .sort(([, aGroup], [, bGroup]) => {
+                    // Сначала по году (DESC), потом по месяцу (DESC)
+                    if (aGroup.year !== bGroup.year) return bGroup.year - aGroup.year;
+                    return bGroup.month - aGroup.month;
+                });
 
             workdaysContainer.innerHTML = '';
 
@@ -372,7 +370,7 @@ async function loadWorkdays() {
                 }).join('')}
                     </div>
                 `;
-                workdaysContainer.prepend(div);
+                workdaysContainer.appendChild(div);
             });
 
             initializeCollapsibleDays();
