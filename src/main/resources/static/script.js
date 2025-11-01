@@ -381,7 +381,7 @@ async function loadWorkdays() {
                 </div>
             `;
 
-            workdaysContainer.appendChild(div);
+            workdaysContainer.prepend(div);
         });
 
         initializeCollapsibleDays();
