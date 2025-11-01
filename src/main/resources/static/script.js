@@ -292,71 +292,86 @@ async function loadWorkdays() {
         const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
         if (res.ok) {
             const workdays = await res.json();
+
             if (!workdays.length) {
                 workdaysContainer.innerHTML = '<div class="empty-state">📭 Нет рабочих дней</div>';
                 initializeCollapsibleDays();
                 return;
             }
 
-            // Данные уже отсортированы с бэкенда - НЕ сортируем повторно
+            // Данные уже приходят отсортированными с бэкенда
             const monthGroups = {};
             const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
+            // Группируем дни по месяцам
             workdays.forEach(day => {
                 const date = new Date(day.workDate);
-                const key = `${date.getFullYear()}-${date.getMonth()}`;
-                if (!monthGroups[key]) monthGroups[key] = {
-                    monthName: `${monthNames[date.getMonth()]} ${date.getFullYear()}`,
-                    days: [],
-                    totalSalary: 0,
-                    totalBonus: 0,
-                    daysCount: 0
-                };
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const key = `${year}-${month}`;
+
+                if (!monthGroups[key]) {
+                    monthGroups[key] = {
+                        monthName: `${monthNames[month]} ${year}`,
+                        days: [],
+                        totalSalary: 0,
+                        totalBonus: 0,
+                        daysCount: 0,
+                        year: year,
+                        month: month
+                    };
+                }
                 monthGroups[key].days.push(day);
                 monthGroups[key].totalSalary += day.salary;
                 monthGroups[key].totalBonus += (day.bonus || 0);
                 monthGroups[key].daysCount++;
             });
 
-            // ПРАВИЛЬНАЯ сортировка месяцев (новые сверху)
-            const sortedGroups = Object.entries(monthGroups).sort(([aKey],[bKey]) => {
-                const [aYear, aMonth] = aKey.split('-').map(Number);
-                const [bYear, bMonth] = bKey.split('-').map(Number);
-
-                if (bYear !== aYear) return bYear - aYear;
-                return bMonth - aMonth;
+            // СОРТИРУЕМ месяцы по убыванию (новые сверху)
+            const sortedGroups = Object.entries(monthGroups).sort(([aKey, aGroup], [bKey, bGroup]) => {
+                // Сначала по году (убывание)
+                if (bGroup.year !== aGroup.year) {
+                    return bGroup.year - aGroup.year;
+                }
+                // Потом по месяцу (убывание)
+                return bGroup.month - aGroup.month;
             });
 
             workdaysContainer.innerHTML = '';
-            sortedGroups.forEach(([_, group]) => {
+
+            // Отображаем месяцы в правильном порядке
+            sortedGroups.forEach(([key, group]) => {
                 const div = document.createElement('div');
                 div.className = 'month-group';
                 const totalIncome = group.totalSalary + group.totalBonus;
+
                 div.innerHTML = `
-                <div class="month-header">
-                    <span>${group.monthName}</span>
-                    <span class="month-total">${group.daysCount} дней • ${formatMoney(totalIncome)}</span>
-                </div>
-                <div class="month-days">
-                    ${group.days.map(day => {
-                    const bonusHtml = (day.bonus && day.bonus > 0) ? `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
+                    <div class="month-header">
+                        <span>${group.monthName}</span>
+                        <span class="month-total">${group.daysCount} дней • ${formatMoney(totalIncome)}</span>
+                    </div>
+                    <div class="month-days">
+                        ${group.days.map(day => {
+                    const bonusHtml = (day.bonus && day.bonus > 0) ?
+                        `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
                     return `
-                        <div class="workday-card">
-                            <div class="workday-info">
-                                <div class="workday-date">
-                                    📅 ${formatDate(day.workDate)}
-                                    <span class="workday-salary">${formatMoney(day.salary)}</span>
-                                    ${bonusHtml}
+                                <div class="workday-card">
+                                    <div class="workday-info">
+                                        <div class="workday-date">
+                                            📅 ${formatDate(day.workDate)}
+                                            <span class="workday-salary">${formatMoney(day.salary)}</span>
+                                            ${bonusHtml}
+                                        </div>
+                                        <div class="workday-description">${day.description || 'Рабочий день'}</div>
+                                    </div>
+                                    <div class="workday-actions">
+                                        <button class="btn btn-danger" onclick="deleteWorkday(${day.id})">🗑️ Удалить</button>
+                                    </div>
                                 </div>
-                                <div class="workday-description">${day.description || 'Рабочий день'}</div>
-                            </div>
-                            <div class="workday-actions">
-                                <button class="btn btn-danger" onclick="deleteWorkday(${day.id})">🗑️ Удалить</button>
-                            </div>
-                        </div>
-                    `}).join('')}
-                </div>
-            `;
+                            `;
+                }).join('')}
+                    </div>
+                `;
                 workdaysContainer.appendChild(div);
             });
 
