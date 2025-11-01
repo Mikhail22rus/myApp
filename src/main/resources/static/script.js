@@ -338,7 +338,7 @@ async function loadWorkdays() {
 
         // ЖЕСТКАЯ сортировка по убыванию monthKey
         monthGroupsArray.sort((a, b) => b.monthKey - a.monthKey);
-        monthGroupsArray.reverse();
+
 
         console.log('Отсортированные месяцы:', monthGroupsArray.map(g => g.monthName));
 
