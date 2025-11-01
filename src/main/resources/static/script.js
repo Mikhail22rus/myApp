@@ -345,7 +345,7 @@ async function loadWorkdays() {
         workdaysContainer.innerHTML = '';
 
         // Отображаем месяцы в отсортированном порядке
-        monthGroupsArray.forEach(group => {
+        monthGroupsArray.reverse().forEach(group => {
             const div = document.createElement('div');
             div.className = 'month-group';
 
