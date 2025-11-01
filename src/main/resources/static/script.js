@@ -301,7 +301,7 @@ async function loadWorkdays() {
                 return;
             }
 
-            workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+          //  workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
 
             const monthGroups = {};
             const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
