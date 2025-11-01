@@ -123,7 +123,7 @@ function safeNumber(value) {
     return isNaN(num) ? 0 : num;
 }
 
-// ===== ФИНАНСОВАЯ СВОДКА ТЕКУЩЕГО МЕСЯЦА С ПЕРЕНОСОМ ДОЛГА =====
+// ===== ФИНАНСОВАЯ СВОДКА ТЕКУЩЕГО МЕСЯЦА =====
 async function updateSummary() {
     if (!currentUser) return;
     try {
@@ -265,7 +265,6 @@ function initializeCollapsibleDays() {
         controlsContainer.appendChild(toggleBtn);
     }
 
-    // Устанавливаем начальное состояние - СВЕРНУТ
     workdaysContainer.classList.add('collapsible', 'collapsed');
     isWorkdaysListCollapsed = true;
 }
@@ -275,12 +274,10 @@ function toggleWorkdaysList() {
     const toggleBtn = document.getElementById('toggleDaysBtn');
 
     if (isWorkdaysListCollapsed) {
-        // Разворачиваем
         workdaysContainer.classList.remove('collapsed');
         toggleBtn.innerHTML = '📂 Свернуть список дней';
         isWorkdaysListCollapsed = false;
     } else {
-        // Сворачиваем
         workdaysContainer.classList.add('collapsed');
         toggleBtn.innerHTML = '📁 Развернуть список дней';
         isWorkdaysListCollapsed = true;
@@ -301,8 +298,7 @@ async function loadWorkdays() {
                 return;
             }
 
-          //  workdays.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
-
+            // Данные уже отсортированы с бэкенда - НЕ сортируем повторно
             const monthGroups = {};
             const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
@@ -322,7 +318,15 @@ async function loadWorkdays() {
                 monthGroups[key].daysCount++;
             });
 
-            const sortedGroups = Object.entries(monthGroups).sort(([a],[b]) => b.localeCompare(a));
+            // ПРАВИЛЬНАЯ сортировка месяцев (новые сверху)
+            const sortedGroups = Object.entries(monthGroups).sort(([aKey],[bKey]) => {
+                const [aYear, aMonth] = aKey.split('-').map(Number);
+                const [bYear, bMonth] = bKey.split('-').map(Number);
+
+                if (bYear !== aYear) return bYear - aYear;
+                return bMonth - aMonth;
+            });
+
             workdaysContainer.innerHTML = '';
             sortedGroups.forEach(([_, group]) => {
                 const div = document.createElement('div');
@@ -356,7 +360,6 @@ async function loadWorkdays() {
                 workdaysContainer.appendChild(div);
             });
 
-            // Инициализируем сворачивание после загрузки данных
             initializeCollapsibleDays();
         }
     } catch (e) {
@@ -375,6 +378,7 @@ async function loadPayments() {
                 paymentsContainer.innerHTML = '<div class="empty-state">💸 Нет выплат</div>';
                 return;
             }
+            // Сортируем выплаты по дате (новые сверху)
             payments.sort((a,b) => new Date(b.paymentDate) - new Date(a.paymentDate));
             paymentsContainer.innerHTML = payments.map(p => `
                 <div class="payment-card">
