@@ -291,7 +291,6 @@ async function loadWorkdays() {
         workdaysContainer.innerHTML = '<div class="loading">Загрузка...</div>';
         const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
         if (!res.ok) throw new Error('Ошибка загрузки рабочих дней');
-
         const workdays = await res.json();
 
         if (!workdays.length) {
@@ -303,15 +302,20 @@ async function loadWorkdays() {
         const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
             'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-        // Группируем дни по году и месяцу
-        const monthGroups = {};
+        const monthOrder = {
+            'JANUARY': 0, 'FEBRUARY': 1, 'MARCH': 2, 'APRIL': 3,
+            'MAY': 4, 'JUNE': 5, 'JULY': 6, 'AUGUST': 7,
+            'SEPTEMBER': 8, 'OCTOBER': 9, 'NOVEMBER': 10, 'DECEMBER': 11
+        };
 
+        // Группируем дни по месяцам
+        const monthGroups = {};
         workdays.forEach(day => {
             const date = new Date(day.workDate);
             const year = date.getFullYear();
-            const month = date.getMonth(); // 0-11
-
+            let month = date.getMonth(); // число 0-11
             const key = `${year}-${month}`;
+
             if (!monthGroups[key]) {
                 monthGroups[key] = {
                     monthName: `${monthNames[month]} ${year}`,
@@ -319,32 +323,36 @@ async function loadWorkdays() {
                     totalSalary: 0,
                     totalBonus: 0,
                     daysCount: 0,
-                    year,
-                    month
+                    year: year,
+                    month: month
                 };
             }
 
             monthGroups[key].days.push(day);
-            monthGroups[key].totalSalary += day.salary;
-            monthGroups[key].totalBonus += (day.bonus || 0);
+            monthGroups[key].totalSalary += day.salary || 0;
+            monthGroups[key].totalBonus += day.bonus || 0;
             monthGroups[key].daysCount++;
         });
 
-        // Сортировка: сначала по году DESC, потом по месяцу DESC (декабрь сверху)
-        const sortedGroups = Object.values(monthGroups)
-            .sort((a, b) => {
-                if (a.year !== b.year) return b.year - a.year;
-                return b.month - a.month; // 11 → 0
-            });
+        // Сортировка месяцев: сначала по году DESC, потом по месяцу DESC
+        const sortedGroups = Object.values(monthGroups).sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+
+            // На всякий случай, если month придёт строкой, конвертируем через monthOrder
+            let monthA = typeof a.month === 'string' ? monthOrder[a.month.toUpperCase()] : a.month;
+            let monthB = typeof b.month === 'string' ? monthOrder[b.month.toUpperCase()] : b.month;
+
+            return monthB - monthA;
+        });
 
         workdaysContainer.innerHTML = '';
 
-        // Рендерим группы
+        // Отображаем месяцы
         sortedGroups.forEach(group => {
-            const totalIncome = group.totalSalary + group.totalBonus;
-
             const div = document.createElement('div');
             div.className = 'month-group';
+            const totalIncome = group.totalSalary + group.totalBonus;
+
             div.innerHTML = `
                 <div class="month-header">
                     <span>${group.monthName}</span>
