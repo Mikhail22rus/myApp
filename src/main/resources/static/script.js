@@ -284,7 +284,6 @@ function toggleWorkdaysList() {
     }
 }
 
-// ===== API ФУНКЦИИ =====
 async function loadWorkdays() {
     if (!currentUser) return;
 
@@ -302,19 +301,23 @@ async function loadWorkdays() {
             return;
         }
 
+        console.log('Дни с бэкенда:', workdays.map(w => w.workDate));
+
         const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-        // Группируем дни по месяцам сразу в массив
+        // Создаем массив для месяцев и СРАЗУ сортируем
         const monthGroupsArray = workdays.reduce((acc, day) => {
             const date = new Date(day.workDate);
             const year = date.getFullYear();
             const month = date.getMonth();
+            const monthKey = year * 12 + month; // Уникальный ключ для сортировки
 
             let group = acc.find(g => g.year === year && g.month === month);
             if (!group) {
                 group = {
                     year,
                     month,
+                    monthKey,
                     monthName: `${monthNames[month]} ${year}`,
                     days: [],
                     totalSalary: 0,
@@ -332,21 +335,21 @@ async function loadWorkdays() {
             return acc;
         }, []);
 
-        // Сортировка месяцев: новые года и новые месяцы сверху
-        monthGroupsArray.sort((a, b) => {
-            if (a.year !== b.year) return b.year - a.year;
-            return b.month - a.month;
-        });
+        // ЖЕСТКАЯ сортировка по убыванию monthKey
+        monthGroupsArray.sort((a, b) => b.monthKey - a.monthKey);
+
+        console.log('Отсортированные месяцы:', monthGroupsArray.map(g => g.monthName));
 
         workdaysContainer.innerHTML = '';
 
+        // Отображаем месяцы в отсортированном порядке
         monthGroupsArray.forEach(group => {
             const div = document.createElement('div');
             div.className = 'month-group';
 
             const totalIncome = group.totalSalary + group.totalBonus;
 
-            // Сортировка дней внутри месяца: новые дни сверху
+            // Сортировка дней внутри месяца по убыванию даты
             group.days.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
 
             div.innerHTML = `
