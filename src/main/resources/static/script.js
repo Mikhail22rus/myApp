@@ -285,6 +285,7 @@ function toggleWorkdaysList() {
 }
 
 async function loadWorkdays() {
+    console.log('🔄 loadWorkdays ВЫЗВАН!');
     if (!currentUser) return;
 
     try {
@@ -380,7 +381,7 @@ async function loadWorkdays() {
                 </div>
             `;
 
-            workdaysContainer.appendChild(div);
+            workdaysContainer.prepend(div);
         });
 
         initializeCollapsibleDays();
