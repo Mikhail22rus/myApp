@@ -287,10 +287,13 @@ function toggleWorkdaysList() {
 // ===== API ФУНКЦИИ =====
 async function loadWorkdays() {
     if (!currentUser) return;
+
     try {
         workdaysContainer.innerHTML = '<div class="loading">Загрузка...</div>';
+
         const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`);
-        if (!res.ok) throw new Error('Ошибка загрузки рабочих дней');
+        if (!res.ok) throw new Error('Ошибка загрузки');
+
         const workdays = await res.json();
 
         if (!workdays.length) {
@@ -299,59 +302,52 @@ async function loadWorkdays() {
             return;
         }
 
-        const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-            'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+        const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-        const monthOrder = {
-            'JANUARY': 0, 'FEBRUARY': 1, 'MARCH': 2, 'APRIL': 3,
-            'MAY': 4, 'JUNE': 5, 'JULY': 6, 'AUGUST': 7,
-            'SEPTEMBER': 8, 'OCTOBER': 9, 'NOVEMBER': 10, 'DECEMBER': 11
-        };
-
-        // Группируем дни по месяцам
-        const monthGroups = {};
-        workdays.forEach(day => {
+        // Группируем дни по месяцам сразу в массив
+        const monthGroupsArray = workdays.reduce((acc, day) => {
             const date = new Date(day.workDate);
             const year = date.getFullYear();
-            let month = date.getMonth(); // число 0-11
-            const key = `${year}-${month}`;
+            const month = date.getMonth();
 
-            if (!monthGroups[key]) {
-                monthGroups[key] = {
+            let group = acc.find(g => g.year === year && g.month === month);
+            if (!group) {
+                group = {
+                    year,
+                    month,
                     monthName: `${monthNames[month]} ${year}`,
                     days: [],
                     totalSalary: 0,
                     totalBonus: 0,
-                    daysCount: 0,
-                    year: year,
-                    month: month
+                    daysCount: 0
                 };
+                acc.push(group);
             }
 
-            monthGroups[key].days.push(day);
-            monthGroups[key].totalSalary += day.salary || 0;
-            monthGroups[key].totalBonus += day.bonus || 0;
-            monthGroups[key].daysCount++;
-        });
+            group.days.push(day);
+            group.totalSalary += day.salary;
+            group.totalBonus += day.bonus || 0;
+            group.daysCount++;
 
-        // Сортировка месяцев: сначала по году DESC, потом по месяцу DESC
-        const sortedGroups = Object.values(monthGroups).sort((a, b) => {
+            return acc;
+        }, []);
+
+        // Сортировка месяцев: новые года и новые месяцы сверху
+        monthGroupsArray.sort((a, b) => {
             if (a.year !== b.year) return b.year - a.year;
-
-            // На всякий случай, если month придёт строкой, конвертируем через monthOrder
-            let monthA = typeof a.month === 'string' ? monthOrder[a.month.toUpperCase()] : a.month;
-            let monthB = typeof b.month === 'string' ? monthOrder[b.month.toUpperCase()] : b.month;
-
-            return monthB - monthA;
+            return b.month - a.month;
         });
 
         workdaysContainer.innerHTML = '';
 
-        // Отображаем месяцы
-        sortedGroups.forEach(group => {
+        monthGroupsArray.forEach(group => {
             const div = document.createElement('div');
             div.className = 'month-group';
+
             const totalIncome = group.totalSalary + group.totalBonus;
+
+            // Сортировка дней внутри месяца: новые дни сверху
+            group.days.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
 
             div.innerHTML = `
                 <div class="month-header">
@@ -360,8 +356,7 @@ async function loadWorkdays() {
                 </div>
                 <div class="month-days">
                     ${group.days.map(day => {
-                const bonusHtml = (day.bonus && day.bonus > 0) ?
-                    `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
+                const bonusHtml = (day.bonus && day.bonus > 0) ? `<span class="workday-bonus">+${formatMoney(day.bonus)} бонус</span>` : '';
                 return `
                             <div class="workday-card">
                                 <div class="workday-info">
@@ -381,7 +376,7 @@ async function loadWorkdays() {
                 </div>
             `;
 
-            workdaysContainer.prepend(div);
+            workdaysContainer.appendChild(div);
         });
 
         initializeCollapsibleDays();
