@@ -93,7 +93,7 @@ public class ReportService {
         validateUserId(userId);
 
         List<WorkDay> userDays = workDayRepository.findByUserId(userId);
-        Month targetMonth = Month.of(month);
+        Month targetMonth = month != null ? Month.of(month) : LocalDate.now().getMonth();
 
         List<WorkDay> monthDays = userDays.stream()
                 .filter(day -> day.getWorkDate().getYear() == year &&
