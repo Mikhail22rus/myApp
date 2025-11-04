@@ -123,7 +123,6 @@ public class ReportService {
         }
     }
 
-    // Вспомогательный класс для статистики месяца
     private static class MonthStats {
         private int daysCount = 0;
         private BigDecimal totalSalary = BigDecimal.ZERO;
@@ -132,10 +131,24 @@ public class ReportService {
 
         public void addDay(WorkDay day) {
             daysCount++;
-            totalSalary = totalSalary.add(day.getSalary() != null ? day.getSalary() : ZERO);
-            totalBonus = totalBonus.add(day.getBonus() != null ? day.getBonus() : ZERO);
-            totalIncome = totalIncome.add((day.getSalary() != null ? day.getSalary() : ZERO)
-                    .add(day.getBonus() != null ? day.getBonus() : ZERO));
+
+            // Безопасное извлечение значений
+            BigDecimal salary = safeGetBigDecimal(day.getSalary());
+            BigDecimal bonus = safeGetBigDecimal(day.getBonus());
+
+            // Сложение
+            totalSalary = totalSalary.add(salary);
+            totalBonus = totalBonus.add(bonus);
+            totalIncome = totalIncome.add(salary).add(bonus);
+
+            System.out.println("Обработан день: " + day.getWorkDate() +
+                    " | salary: " + salary +
+                    " | bonus: " + bonus +
+                    " | totalIncome: " + totalIncome);
+        }
+
+        private BigDecimal safeGetBigDecimal(BigDecimal value) {
+            return value != null ? value : BigDecimal.ZERO;
         }
 
         public int getDaysCount() { return daysCount; }

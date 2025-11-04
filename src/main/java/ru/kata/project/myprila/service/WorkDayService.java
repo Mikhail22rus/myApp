@@ -45,37 +45,31 @@ public class WorkDayService {
     public WorkDay addOrUpdateWorkDay(LocalDate workDate, String description, BigDecimal salary, BigDecimal bonus, Long userId) {
         User user = validateUserExists(userId);
 
-        // Ищем существующий день
         Optional<WorkDay> existingDay = workDayRepository.findByWorkDateAndUserId(workDate, userId);
-
         WorkDay workDay;
 
         if (existingDay.isPresent()) {
-            // Обновляем существующий день
             workDay = existingDay.get();
-
             if (description != null && !description.trim().isEmpty()) {
                 workDay.setDescription(description);
             }
-            if (salary != null && salary.compareTo(ZERO) >= 0) {
-                workDay.setSalary(salary);
-            }
-            if (bonus != null && bonus.compareTo(ZERO) >= 0) {
-                workDay.setBonus(bonus);
-            }
+            // ИСПРАВЛЕНИЕ: гарантируем, что salary никогда не будет null
+            workDay.setSalary(salary != null ? salary :
+                    workDay.getSalary() != null ? workDay.getSalary() : DEFAULT_SALARY);
+            // ИСПРАВЛЕНИЕ: гарантируем, что bonus никогда не будет null
+            workDay.setBonus(bonus != null ? bonus :
+                    workDay.getBonus() != null ? workDay.getBonus() : ZERO);
         } else {
-            // Создаем новый день
             workDay = new WorkDay();
             workDay.setWorkDate(workDate);
             workDay.setUser(user);
             workDay.setDescription(description != null ? description : "Рабочий день");
             workDay.setSalary(salary != null ? salary : DEFAULT_SALARY);
-            workDay.setBonus(bonus != null ? bonus : ZERO);
+            workDay.setBonus(bonus != null ? bonus : ZERO); // Всегда ZERO, а не null
         }
 
         return workDayRepository.save(workDay);
     }
-
     /**
      * Добавить только заработок (без изменения бонуса)
      */
