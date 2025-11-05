@@ -18,7 +18,8 @@ public class AuthController {
 
     private final Map<String, String> users = Map.of(
             "Миша", "пароль123",
-            "Игорь", "igor2024"
+            "Игорь", "igor2024",
+            "test", "1"
     );
 
 

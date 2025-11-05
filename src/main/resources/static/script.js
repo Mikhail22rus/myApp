@@ -33,15 +33,8 @@ const reportTitle = document.getElementById('reportTitle');
 const reportContent = document.getElementById('reportContent');
 const exportReportBtn = document.getElementById('exportReport');
 
-// Элементы для графика
-const chartContainer = document.getElementById('chartContainer');
-const chartTitle = document.getElementById('chartTitle');
-const toggleChartViewBtn = document.getElementById('toggleChartView');
-
 // Переменные для управления состоянием
 let isWorkdaysListCollapsed = true;
-let monthlyChart = null;
-let isStackedChart = false;
 
 // ===== АВТОРИЗАЦИЯ =====
 async function login(username, password) {
@@ -481,7 +474,7 @@ async function deletePayment(id) {
     } catch(e){ showMessage('Ошибка удаления', 'error'); }
 }
 
-// ===== ОТЧЕТЫ И ГРАФИКИ =====
+// ===== ОТЧЕТЫ =====
 function initReports() {
     initYearSelector();
     setupReportEventListeners();
@@ -505,29 +498,11 @@ function initYearSelector() {
 function setupReportEventListeners() {
     reportTypeSelect.addEventListener('change', function() {
         const isDetailedReport = this.value === 'monthly-detailed';
-        const isChart = this.value === 'chart';
         monthField.style.display = isDetailedReport ? 'block' : 'none';
-
-        chartContainer.style.display = isChart ? 'block' : 'none';
-        reportContainer.style.display = isChart ? 'none' : 'block';
     });
 
     generateReportBtn.addEventListener('click', generateReport);
     exportReportBtn.addEventListener('click', exportReport);
-    toggleChartViewBtn.addEventListener('click', toggleChartView);
-}
-
-function toggleChartView() {
-    if (!monthlyChart) return;
-
-    isStackedChart = !isStackedChart;
-
-    monthlyChart.options.scales.x.stacked = isStackedChart;
-    monthlyChart.options.scales.y.stacked = isStackedChart;
-
-    toggleChartViewBtn.textContent = isStackedChart ? '🔄 Обычный вид' : '🔄 Группированный вид';
-
-    monthlyChart.update();
 }
 
 async function generateReport() {
@@ -543,9 +518,7 @@ async function generateReport() {
 
         let url = `${API_BASE_URL}/reports/`;
 
-        if (reportType === 'chart') {
-            url += `monthly?userId=${currentUser.userId}&year=${year}`;
-        } else if (reportType === 'monthly-detailed') {
+        if (reportType === 'monthly-detailed') {
             url += `monthly-detailed?userId=${currentUser.userId}&year=${year}&month=${month}`;
         } else {
             url += `${reportType}?userId=${currentUser.userId}&year=${year}`;
@@ -570,7 +543,6 @@ async function generateReport() {
 
 function displayReport(reportType, data, year, month) {
     reportContainer.style.display = 'block';
-    chartContainer.style.display = 'none';
     reportContent.innerHTML = '';
 
     switch (reportType) {
@@ -582,11 +554,6 @@ function displayReport(reportType, data, year, month) {
             break;
         case 'monthly-detailed':
             displayMonthlyDetailedReport(data, year, month);
-            break;
-        case 'chart':
-            displayChart(data, year);
-            chartContainer.style.display = 'block';
-            reportContainer.style.display = 'none';
             break;
     }
 }
@@ -758,110 +725,6 @@ function displayMonthlyDetailedReport(data, year, month) {
     reportContent.innerHTML = html;
 }
 
-function displayChart(data, year) {
-    const ctx = document.getElementById('monthlyChart').getContext('2d');
-
-    if (monthlyChart) {
-        monthlyChart.destroy();
-    }
-
-    const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
-        'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
-
-    const labels = monthNames;
-    const incomeData = Array(12).fill(0);
-    const salaryData = Array(12).fill(0);
-    const bonusData = Array(12).fill(0);
-
-    data.forEach(monthReport => {
-        const monthIndex = monthReport.monthValue - 1;
-        incomeData[monthIndex] = monthReport.totalIncome;
-        salaryData[monthIndex] = monthReport.totalSalary;
-        bonusData[monthIndex] = monthReport.totalBonus;
-    });
-
-    chartTitle.textContent = `График доходов за ${year} год`;
-
-    monthlyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Общий доход',
-                    data: incomeData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Зарплата',
-                    data: salaryData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Бонусы',
-                    data: bonusData,
-                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Доходы по месяцам за ${year} год`,
-                    font: { size: 16 }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + formatMoney(context.parsed.y);
-                        }
-                    }
-                },
-                legend: {
-                    position: 'top',
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Сумма (руб.)'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            if (value >= 1000000) {
-                                return (value / 1000000).toFixed(1) + 'M';
-                            } else if (value >= 1000) {
-                                return (value / 1000).toFixed(0) + 'K';
-                            }
-                            return value;
-                        }
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Месяцы'
-                    }
-                }
-            }
-        }
-    });
-
-    isStackedChart = false;
-    toggleChartViewBtn.textContent = '🔄 Группированный вид';
-}
-
 function exportReport() {
     const reportTitleText = reportTitle.textContent;
     const reportContentHtml = reportContent.innerHTML;
@@ -944,13 +807,6 @@ tabs.forEach(tab => {
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
-
-    if (chartContainer) {
-        chartContainer.style.display = 'none';
-    }
-    if (toggleChartViewBtn) {
-        toggleChartViewBtn.style.display = 'block';
-    }
 });
 
 // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
