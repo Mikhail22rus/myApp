@@ -51,9 +51,7 @@
             <button type="submit" class="btn btn-success">Войти</button>
         </form>
     </div>
-    <div id="successImage" class="success-image" style="display: none;">
-        <img src="" alt="Успех" id="successImg">
-    </div>
+
     <!-- Основной контент -->
     <div id="mainContent" style="display: none;">
         <!-- Информация о пользователе -->
@@ -215,5 +213,11 @@
 </div>
 
 <script src="script.js"></script>
+<div id="successImage" class="success-image-overlay" style="display: none;">
+    <div class="success-image-container">
+        <img id="successImg" src="/images/успех.jpg" alt="Успех">
+        <div class="success-text">Успешно!</div>
+    </div>
+</div>
 </body>
 </html>

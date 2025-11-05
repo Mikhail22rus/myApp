@@ -411,7 +411,52 @@ async function loadPayments() {
         paymentsContainer.innerHTML = '<div class="loading">Ошибка загрузки</div>';
     }
 }
+function showSuccessImage() {
+    // Создаем элементы если их нет
+    let successOverlay = document.getElementById('successImage');
 
+    if (!successOverlay) {
+        successOverlay = document.createElement('div');
+        successOverlay.id = 'successImage';
+        successOverlay.className = 'success-image-overlay';
+        successOverlay.style.display = 'none';
+
+        const container = document.createElement('div');
+        container.className = 'success-image-container';
+
+        const img = document.createElement('img');
+        img.id = 'successImg';
+        img.src = '/images/успех.jpg';
+        img.alt = 'Успех';
+
+        const text = document.createElement('div');
+        text.className = 'success-text';
+        text.textContent = 'Успешно!';
+
+        container.appendChild(img);
+        container.appendChild(text);
+        successOverlay.appendChild(container);
+        document.body.appendChild(successOverlay);
+
+        // Закрытие по клику на overlay
+        successOverlay.addEventListener('click', function() {
+            this.style.display = 'none';
+        });
+    }
+
+    const successImg = document.getElementById('successImg');
+
+    // Установите правильный путь к вашей картинке
+    successImg.src = '/images/успех.jpg';
+
+    // Показываем на весь экран
+    successOverlay.style.display = 'flex';
+
+    // Автоматически скрываем через 1,5 секунды
+    setTimeout(() => {
+        successOverlay.style.display = 'none';
+    }, 1500);
+}
 // ===== ДОБАВЛЕНИЕ ДАННЫХ =====
 async function addWorkday(workdayData) {
     if (!currentUser) return;
@@ -458,22 +503,7 @@ async function addSalaryPayment(paymentData) {
         }
     } catch(e){ showMessage('Ошибка соединения', 'error'); }
 }
-function showSuccessImage() {
-    const successImage = document.getElementById('successImage');
-    const successImg = document.getElementById('successImg');
 
-    // Установите путь к вашей картинке
-    // Пока используем временную картинку
-    successImg.src = '/images/успех.jpg';
-
-    // Показываем картинку
-    successImage.style.display = 'block';
-
-    // Автоматически скрываем через 1,5 секунды
-    setTimeout(() => {
-        successImage.style.display = 'none';
-    }, 1500);
-}
 async function deleteWorkday(id) {
     if (!currentUser || !confirm('Удалить день?')) return;
     try {

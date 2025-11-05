@@ -1090,4 +1090,60 @@ input:focus, textarea:focus, select:focus {
         z-index: 9999;
         display: none;
     }
+    .success-image-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .success-image-container {
+        text-align: center;
+        animation: scaleIn 0.5s ease-in-out;
+    }
+
+    .success-image-container img {
+        max-width: 90vw;
+        max-height: 80vh;
+        border-radius: 10px;
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    }
+
+    .success-text {
+        color: white;
+        font-size: 2rem;
+        font-weight: bold;
+        margin-top: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes scaleIn {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
 }
