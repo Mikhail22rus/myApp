@@ -469,7 +469,7 @@ function showSuccessImage() {
     // Показываем картинку
     successImage.style.display = 'block';
 
-    // Автоматически скрываем через 2 секунды
+    // Автоматически скрываем через 1,5 секунды
     setTimeout(() => {
         successImage.style.display = 'none';
     }, 1500);

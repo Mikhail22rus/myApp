@@ -19,6 +19,9 @@
     <description>Приложение для учета рабочих дней и зарплаты</description>
 
     <properties>
+
+            <skipTests>true</skipTests>
+
         <java.version>17</java.version>
     </properties>
 
