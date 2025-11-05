@@ -426,6 +426,7 @@ async function addWorkday(workdayData) {
         if (res.ok) {
             const saved = await res.json();
             const bonusText = (saved.bonus && saved.bonus > 0) ? ` + ${formatMoney(saved.bonus)} допдоход` : '';
+            showSuccessImage();
             showMessage(`День добавлен! +${formatMoney(saved.salary)}${bonusText}`);
             workdayForm.reset();
             document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
@@ -457,7 +458,22 @@ async function addSalaryPayment(paymentData) {
         }
     } catch(e){ showMessage('Ошибка соединения', 'error'); }
 }
+function showSuccessImage() {
+    const successImage = document.getElementById('successImage');
+    const successImg = document.getElementById('successImg');
 
+    // Установите путь к вашей картинке
+    // Пока используем временную картинку
+    successImg.src = '/images/успех.jpg';
+
+    // Показываем картинку
+    successImage.style.display = 'block';
+
+    // Автоматически скрываем через 2 секунды
+    setTimeout(() => {
+        successImage.style.display = 'none';
+    }, 1500);
+}
 async function deleteWorkday(id) {
     if (!currentUser || !confirm('Удалить день?')) return;
     try {
