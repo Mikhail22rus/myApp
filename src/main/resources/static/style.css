@@ -1147,3 +1147,50 @@ input:focus, textarea:focus, select:focus {
         100% { transform: scale(1); }
     }
 }
+.message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    padding: 20px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    max-width: 90%;
+    animation: slideInUp 0.3s ease-out;
+}
+
+.message.success {
+    background: #4CAF50;
+    color: white;
+    border: none;
+}
+
+.message.error {
+    background: #f44336;
+    color: white;
+    border: none;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+/* Для мобильных устройств - сделать плашку более заметной */
+@media (max-width: 768px) {
+    .message {
+        padding: 25px 35px;
+        font-size: 1.1rem;
+        width: auto;
+        min-width: 280px;
+    }
+}

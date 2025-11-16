@@ -53,10 +53,10 @@ public class WorkDayService {
             if (description != null && !description.trim().isEmpty()) {
                 workDay.setDescription(description);
             }
-            // ИСПРАВЛЕНИЕ: гарантируем, что salary никогда не будет null
+
             workDay.setSalary(salary != null ? salary :
                     workDay.getSalary() != null ? workDay.getSalary() : DEFAULT_SALARY);
-            // ИСПРАВЛЕНИЕ: гарантируем, что bonus никогда не будет null
+
             workDay.setBonus(bonus != null ? bonus :
                     workDay.getBonus() != null ? workDay.getBonus() : ZERO);
         } else {
@@ -70,6 +70,7 @@ public class WorkDayService {
 
         return workDayRepository.save(workDay);
     }
+
     /**
      * Добавить только заработок (без изменения бонуса)
      */
