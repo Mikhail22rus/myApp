@@ -782,9 +782,13 @@ function exportReport() {
         <div style="margin-top: 20px; font-size: 12px; color: #666;">
             Сгенерировано: ${new Date().toLocaleString('ru-RU')}
         </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="window.close()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Закрыть окно</button>
+        </div>
     `;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+
     printWindow.document.write(`
         <html>
             <head>
@@ -796,15 +800,27 @@ function exportReport() {
                     th { background-color: #f5f5f5; }
                     .month-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
                     .stat-item { text-align: center; margin-bottom: 10px; }
+                    @media print {
+                        button { display: none; }
+                    }
                 </style>
             </head>
             <body>
                 ${tempDiv.innerHTML}
+                <script>
+                    // Автоматическая печать и закрытие
+                    window.onload = function() {
+                        window.print();
+                        // Не закрываем автоматически - пусть пользователь сам решит
+                    };
+                </script>
             </body>
         </html>
     `);
     printWindow.document.close();
-    printWindow.print();
+
+    // Фокус остается в основном окне
+    window.focus();
 }
 
 // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
