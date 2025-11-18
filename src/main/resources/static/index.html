@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Работа">
@@ -15,8 +14,6 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/favicon.ico">
 
-
-
     <link rel="apple-touch-icon" href="/favicon.ico">
     <link rel="apple-touch-icon" sizes="152x152" href="/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico">
@@ -24,9 +21,6 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
     <title>Учет рабочих дней и зарплаты</title>
     <link rel="stylesheet" href="style.css">
-
-
-
 </head>
 <body>
 <div class="container">
@@ -169,8 +163,6 @@
                     <select id="reportType" class="form-control">
                         <option value="monthly">📅 Отчет по месяцам</option>
                         <option value="annual">📊 Годовой отчет</option>
-
-
                     </select>
                 </div>
 
@@ -201,7 +193,10 @@
                 <div id="reportContainer" class="report-container" style="display: none;">
                     <div class="report-header">
                         <h4 id="reportTitle"></h4>
-                        <button id="exportReport" class="btn btn-success">📥 Экспорт</button>
+                        <div class="report-actions">
+                            <button id="exportReport" class="btn btn-success">📥 Экспорт</button>
+                            <button id="closeReport" class="btn btn-danger">✕ Закрыть</button>
+                        </div>
                     </div>
                     <div id="reportContent" class="report-content">
                         <!-- Сюда будет вставляться отчет -->

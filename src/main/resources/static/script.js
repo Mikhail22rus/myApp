@@ -549,6 +549,10 @@ function setupReportEventListeners() {
 
     generateReportBtn.addEventListener('click', generateReport);
     exportReportBtn.addEventListener('click', exportReport);
+
+    document.getElementById('closeReport').addEventListener('click', function() {
+        document.getElementById('reportContainer').style.display = 'none';
+    });
 }
 
 async function generateReport() {
