@@ -426,7 +426,7 @@ function showSuccessImage() {
 
         const img = document.createElement('img');
         img.id = 'successImg';
-        img.src = '/images/успех.jpg';
+        img.src = 'images/успех.jpg';
         img.alt = 'Успех';
 
         const text = document.createElement('div');
