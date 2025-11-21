@@ -450,7 +450,7 @@ function showSuccessImage() {
 
     // Текст
     const text = document.createElement('div');
-    text.textContent = 'Успешно!';
+    text.textContent = '';
     text.style.cssText = `
         font-size: 24px;
         font-weight: bold;
@@ -473,7 +473,7 @@ function showSuccessImage() {
         if (document.body.contains(overlay)) {
             document.body.removeChild(overlay);
         }
-    }, 1000);
+    }, 1200);
 }
 
 // ===== ДОБАВЛЕНИЕ ДАННЫХ =====
