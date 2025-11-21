@@ -412,45 +412,70 @@ async function loadPayments() {
     }
 }
 function showSuccessImage() {
-    let successOverlay = document.getElementById('successImage');
+    // Создаем простой overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
 
-    if (!successOverlay) {
-        successOverlay = document.createElement('div');
-        successOverlay.id = 'successImage';
-        successOverlay.className = 'success-image-overlay';
-        successOverlay.style.display = 'none';
+    // Создаем контейнер для картинки
+    const container = document.createElement('div');
+    container.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    `;
 
-        const container = document.createElement('div');
-        container.className = 'success-image-container';
+    // Создаем картинку
+    const img = document.createElement('img');
+    img.src = 'images/успех.jpg';
+    img.alt = 'Успех';
+    img.style.cssText = `
+        max-width: 200px;
+        max-height: 200px;
+        display: block;
+        margin: 0 auto 15px;
+    `;
 
-        const img = document.createElement('img');
-        img.id = 'successImg';
-        img.src = 'images/успех.jpg';  // ← ПРАВИЛЬНЫЙ ПУТЬ
-        img.alt = 'Успех';
+    // Текст
+    const text = document.createElement('div');
+    text.textContent = 'Успешно!';
+    text.style.cssText = `
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+    `;
 
-        const text = document.createElement('div');
-        text.className = 'success-text';
-        text.textContent = 'Успешно!';
+    // Собираем всё
+    container.appendChild(img);
+    container.appendChild(text);
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
 
-        container.appendChild(img);
-        container.appendChild(text);
-        successOverlay.appendChild(container);
-        document.body.appendChild(successOverlay);
+    // Закрытие по клику
+    overlay.addEventListener('click', function() {
+        document.body.removeChild(overlay);
+    });
 
-        successOverlay.addEventListener('click', function() {
-            this.style.display = 'none';
-        });
-    }
-
-    const successImg = document.getElementById('successImg');
-    successImg.src = 'images/успех.jpg';  // ← ПРАВИЛЬНЫЙ ПУТЬ
-
-    successOverlay.style.display = 'flex';
-
+    // Авто-закрытие через 0.8 секунды
     setTimeout(() => {
-        successOverlay.style.display = 'none';
-    }, 800);  // ← БЫСТРЫЙ ПОКАЗ
+        if (document.body.contains(overlay)) {
+            document.body.removeChild(overlay);
+        }
+    }, 1000);
 }
+
 // ===== ДОБАВЛЕНИЕ ДАННЫХ =====
 async function addWorkday(workdayData) {
     if (!currentUser) return;
