@@ -412,7 +412,6 @@ async function loadPayments() {
     }
 }
 function showSuccessImage() {
-    // Создаем элементы если их нет
     let successOverlay = document.getElementById('successImage');
 
     if (!successOverlay) {
@@ -426,7 +425,7 @@ function showSuccessImage() {
 
         const img = document.createElement('img');
         img.id = 'successImg';
-        img.src = 'images/успех.jpg';
+        img.src = 'images/успех.jpg';  // ← ПРАВИЛЬНЫЙ ПУТЬ
         img.alt = 'Успех';
 
         const text = document.createElement('div');
@@ -438,24 +437,19 @@ function showSuccessImage() {
         successOverlay.appendChild(container);
         document.body.appendChild(successOverlay);
 
-        // Закрытие по клику на overlay
         successOverlay.addEventListener('click', function() {
             this.style.display = 'none';
         });
     }
 
     const successImg = document.getElementById('successImg');
+    successImg.src = 'images/успех.jpg';  // ← ПРАВИЛЬНЫЙ ПУТЬ
 
-    // Установите правильный путь к вашей картинке
-    successImg.src = '/images/успех.jpg';
-
-    // Показываем на весь экран
     successOverlay.style.display = 'flex';
 
-    // Автоматически скрываем через 1,5 секунды
     setTimeout(() => {
         successOverlay.style.display = 'none';
-    }, 1500);
+    }, 800);  // ← БЫСТРЫЙ ПОКАЗ
 }
 // ===== ДОБАВЛЕНИЕ ДАННЫХ =====
 async function addWorkday(workdayData) {
