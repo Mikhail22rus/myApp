@@ -1,12 +1,10 @@
-FROM openjdk:17-jdk-slim
-
+FROM maven:3.8-openjdk-17 as builder
 WORKDIR /app
+COPY . .
+RUN mvn clean package
 
-# Копируем собранный JAR файл
-COPY build/libs/myApp-*.jar app.jar
-
-# Открываем порт
-EXPOSE 8080
-
-# Запускаем приложение
-ENTRYPOINT ["java", "-jar", "app.jar"]
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+EXPOSE $PORT
+CMD ["java", "-jar", "app.jar"]
