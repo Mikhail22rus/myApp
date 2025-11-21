@@ -442,10 +442,10 @@ function showSuccessImage() {
     img.src = 'images/успех.jpg';
     img.alt = 'Успех';
     img.style.cssText = `
-        max-width: 200px;
-        max-height: 200px;
+        max-width: 300px;
+        max-height: 300px;
         display: block;
-        margin: 0 auto 15px;
+        margin: 0 auto 20px;
     `;
 
     // Текст
