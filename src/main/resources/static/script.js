@@ -100,7 +100,7 @@ function showLoginForm() {
 function showMessage(text, type = 'success') {
     messageDiv.textContent = text;
     messageDiv.className = `message ${type}`;
-    setTimeout(() => { messageDiv.className = 'message'; }, 5000);
+    setTimeout(() => { messageDiv.className = 'message'; }, 2000);
 }
 
 function formatDate(dateString) {
