@@ -7,6 +7,7 @@ import ru.kata.project.myprila.entity.SalaryPayment;
 import ru.kata.project.myprila.service.WorkDayService;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -31,19 +32,27 @@ public class SalaryPaymentController {
     }
 
     // ✅ Добавить выплату ДЛЯ ПОЛЬЗОВАТЕЛЯ
+    // ✅ Добавить выплату ДЛЯ ПОЛЬЗОВАТЕЛЯ
     @PostMapping
     public ResponseEntity<?> addPayment(@RequestBody PaymentRequest request, @RequestParam Long userId) {
         try {
-            System.out.println("💰 POST /api/payments - добавление выплаты для пользователя ID: " + userId + ", сумма: " + request.getAmount());
+            System.out.println("💰 POST /api/payments - добавление выплаты для пользователя ID: " + userId +
+                    ", сумма: " + request.getAmount() +
+                    ", дата: " + request.getPaymentDate());
 
             // Валидация
             if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 return ResponseEntity.badRequest().body(new ErrorResponse("Сумма должна быть положительной"));
             }
 
+            if (request.getPaymentDate() == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Дата выплаты обязательна"));
+            }
+
             SalaryPayment payment = workDayService.addSalaryPayment(
                     request.getAmount(),
                     request.getDescription(),
+                    request.getPaymentDate(), // ПЕРЕДАЕМ ДАТУ
                     userId
             );
 
@@ -131,10 +140,10 @@ public class SalaryPaymentController {
     }
 
     // DTO классы
-
     public static class PaymentRequest {
         private BigDecimal amount;
         private String description;
+        private LocalDate paymentDate; // ДОБАВЬТЕ ЭТО ПОЛЕ
 
         // Геттеры и сеттеры
         public BigDecimal getAmount() {
@@ -151,6 +160,14 @@ public class SalaryPaymentController {
 
         public void setDescription(String description) {
             this.description = description;
+        }
+
+        public LocalDate getPaymentDate() {
+            return paymentDate;
+        }
+
+        public void setPaymentDate(LocalDate paymentDate) {
+            this.paymentDate = paymentDate;
         }
     }
 

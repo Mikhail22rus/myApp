@@ -12,6 +12,7 @@ import ru.kata.project.myprila.repo.WorkDayReposytory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -184,16 +185,38 @@ public class WorkDayService {
 
     // ========== ВЫПЛАТЫ ==========
 
-    public SalaryPayment addSalaryPayment(BigDecimal amount, String description, Long userId) {
+    // ========== ВЫПЛАТЫ ==========
+
+    public SalaryPayment addSalaryPayment(BigDecimal amount, String description, LocalDate paymentDate, Long userId) {
         User user = validateUserExists(userId);
 
         if (amount == null || amount.compareTo(ZERO) <= 0) {
             throw new RuntimeException("Сумма выплаты должна быть положительной");
         }
 
-        SalaryPayment payment = new SalaryPayment(amount, description, user);
-        return salaryPaymentRepository.save(payment);
+        // Преобразуем LocalDate в LocalDateTime (начало дня)
+        LocalDateTime paymentDateTime;
+        if (paymentDate == null) {
+            paymentDateTime = LocalDateTime.now();
+        } else {
+            paymentDateTime = paymentDate.atStartOfDay(); // 00:00:00
+        }
+
+        SalaryPayment payment = new SalaryPayment();
+        payment.setAmount(amount);
+        payment.setDescription(description);
+        payment.setPaymentDate(paymentDateTime); // LocalDateTime
+        payment.setUser(user);
+
+        SalaryPayment savedPayment = salaryPaymentRepository.save(payment);
+        System.out.println("💾 Сохранена выплата: " + savedPayment.getAmount() +
+                " на дату: " + savedPayment.getPaymentDate().toLocalDate());
+
+        return savedPayment;
     }
+
+
+
 
     public List<SalaryPayment> getUserSalaryPayments(Long userId) {
         validateUserExists(userId);

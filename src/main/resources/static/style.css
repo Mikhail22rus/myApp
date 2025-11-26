@@ -1192,7 +1192,102 @@ input:focus, textarea:focus, select:focus {
         transform: translate(-50%, -50%);
     }
 }
+.month-group {
+    margin-bottom: 25px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
 
+.month-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+.month-total {
+    font-size: 14px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.month-payments {
+    background: #fafafa;
+}
+
+.payment-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    background: white;
+}
+
+.payment-card:last-child {
+    border-bottom: none;
+}
+
+.payment-info {
+    flex: 1;
+}
+
+.payment-date {
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.payment-amount {
+    color: #2e7d32;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.payment-description {
+    color: #666;
+    font-size: 14px;
+}
+
+.payment-actions {
+    margin-left: 15px;
+}
+.payment-amount {
+    background: #f8f9fa;
+    color: #2c3e50;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid #e9ecef;
+    white-space: nowrap;
+}
+
+/* Улучшаем видимость даты */
+.payment-date {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 16px;
+    font-weight: 500;
+    gap: 15px;
+}
+/* Анимация при добавлении новой выплаты */
+.payment-card {
+    transition: all 0.3s ease;
+}
+
+.payment-card:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
 /* Для мобильных устройств - сделать плашку более заметной */
 @media (max-width: 768px) {
     .message {
