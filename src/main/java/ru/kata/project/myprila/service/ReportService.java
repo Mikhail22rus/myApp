@@ -21,11 +21,21 @@ public class ReportService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
-
-
+    // ---------------------------- FULL DAILY REPORT ----------------------------
 
     public FullDailyReportDTO getFullDailyReport(Long userId) {
         List<WorkDay> workDays = workDayRepository.findByUserIdOrderByWorkDateDesc(userId);
+
+        // фильтруем null-даты и предупреждаем
+        workDays = workDays.stream()
+                .filter(day -> {
+                    if (day.getWorkDate() == null) {
+                        System.err.println("⚠ Найдена запись с NULL workDate, id=" + day.getId());
+                        return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
 
         // Конвертируем в DTO
         List<DailyReportDTO> dailyReportDTOs = workDays.stream()
@@ -33,33 +43,39 @@ public class ReportService {
                         workDay.getId(),
                         workDay.getWorkDate(),
                         workDay.getDescription(),
-                        workDay.getSalary(),
-                        workDay.getBonus()
+                        safe(workDay.getSalary()),
+                        safe(workDay.getBonus())
                 ))
                 .collect(Collectors.toList());
 
-        // Рассчитываем статистику
         int totalDays = workDays.size();
         BigDecimal totalSalary = workDays.stream()
-                .map(WorkDay::getSalary)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(w -> safe(w.getSalary()))
+                .reduce(ZERO, BigDecimal::add);
         BigDecimal totalBonus = workDays.stream()
-                .map(WorkDay::getBonus)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(w -> safe(w.getBonus()))
+                .reduce(ZERO, BigDecimal::add);
+
         BigDecimal totalIncome = totalSalary.add(totalBonus);
         BigDecimal averagePerDay = totalDays > 0 ?
                 totalIncome.divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP) :
-                BigDecimal.ZERO;
+                ZERO;
 
         return new FullDailyReportDTO(totalDays, totalSalary, totalBonus, totalIncome, averagePerDay, dailyReportDTOs);
     }
+
+    // ----------------------------- MONTHLY REPORT ------------------------------
+
     public List<MonthlyReportDTO> getMonthlyReport(Long userId, Integer year) {
         validateUserId(userId);
 
         List<WorkDay> userDays = workDayRepository.findByUserId(userId);
         int targetYear = year != null ? year : LocalDate.now().getYear();
 
-        // Группируем по месяцам
+        userDays = userDays.stream()
+                .filter(d -> d.getWorkDate() != null)
+                .collect(Collectors.toList());
+
         Map<Month, MonthStats> monthlyStats = userDays.stream()
                 .filter(day -> day.getWorkDate().getYear() == targetYear)
                 .collect(Collectors.groupingBy(
@@ -67,7 +83,6 @@ public class ReportService {
                         Collectors.collectingAndThen(Collectors.toList(), this::calculateMonthStats)
                 ));
 
-        // Создаем отчет для всех месяцев
         List<MonthlyReportDTO> report = new ArrayList<>();
         for (Month month : Month.values()) {
             MonthStats stats = monthlyStats.getOrDefault(month, new MonthStats());
@@ -80,31 +95,20 @@ public class ReportService {
         return report;
     }
 
-    /**
-     * Годовой отчет
-     */
+    // ------------------------------- ANNUAL REPORT ----------------------------
+
     public AnnualReportDTO getAnnualReport(Long userId, Integer year) {
         validateUserId(userId);
 
         int targetYear = year != null ? year : LocalDate.now().getYear();
         List<MonthlyReportDTO> monthlyReport = getMonthlyReport(userId, targetYear);
 
-        // Считаем общие суммы
         int totalDays = monthlyReport.stream().mapToInt(MonthlyReportDTO::getDaysCount).sum();
-        BigDecimal totalSalary = monthlyReport.stream()
-                .map(MonthlyReportDTO::getTotalSalary)
-                .reduce(ZERO, BigDecimal::add);
-        BigDecimal totalBonus = monthlyReport.stream()
-                .map(MonthlyReportDTO::getTotalBonus)
-                .reduce(ZERO, BigDecimal::add);
-        BigDecimal totalIncome = monthlyReport.stream()
-                .map(MonthlyReportDTO::getTotalIncome)
-                .reduce(ZERO, BigDecimal::add);
+        BigDecimal totalSalary = monthlyReport.stream().map(MonthlyReportDTO::getTotalSalary).reduce(ZERO, BigDecimal::add);
+        BigDecimal totalBonus = monthlyReport.stream().map(MonthlyReportDTO::getTotalBonus).reduce(ZERO, BigDecimal::add);
+        BigDecimal totalIncome = monthlyReport.stream().map(MonthlyReportDTO::getTotalIncome).reduce(ZERO, BigDecimal::add);
 
-        // Средний месячный доход
-        long monthsWithData = monthlyReport.stream()
-                .filter(month -> month.getDaysCount() > 0)
-                .count();
+        long monthsWithData = monthlyReport.stream().filter(m -> m.getDaysCount() > 0).count();
         BigDecimal averageMonthlyIncome = monthsWithData > 0 ?
                 totalIncome.divide(BigDecimal.valueOf(monthsWithData), 2, RoundingMode.HALF_UP) :
                 ZERO;
@@ -113,13 +117,17 @@ public class ReportService {
                 totalIncome, averageMonthlyIncome, monthlyReport);
     }
 
-    /**
-     * Детальный отчет по месяцу
-     */
+    // -------------------------- MONTHLY DETAILED REPORT -----------------------
+
     public MonthlyDetailedReportDTO getMonthlyDetailedReport(Long userId, Integer year, Integer month) {
         validateUserId(userId);
 
         List<WorkDay> userDays = workDayRepository.findByUserId(userId);
+
+        userDays = userDays.stream()
+                .filter(day -> day.getWorkDate() != null)
+                .collect(Collectors.toList());
+
         Month targetMonth = month != null ? Month.of(month) : LocalDate.now().getMonth();
 
         List<WorkDay> monthDays = userDays.stream()
@@ -135,9 +143,8 @@ public class ReportService {
                 stats.getTotalIncome(), monthDays);
     }
 
-    /**
-     * Вспомогательный метод для расчета статистики месяца
-     */
+    // ---------------------------- Helper Methods ------------------------------
+
     private MonthStats calculateMonthStats(List<WorkDay> days) {
         MonthStats stats = new MonthStats();
         days.forEach(stats::addDay);
@@ -150,20 +157,24 @@ public class ReportService {
         }
     }
 
+    private BigDecimal safe(BigDecimal value) {
+        return value != null ? value : ZERO;
+    }
+
+    // ----------------------------- Inner class --------------------------------
+
     private static class MonthStats {
         private int daysCount = 0;
-        private BigDecimal totalSalary = BigDecimal.ZERO;
-        private BigDecimal totalBonus = BigDecimal.ZERO;
-        private BigDecimal totalIncome = BigDecimal.ZERO;
+        private BigDecimal totalSalary = ZERO;
+        private BigDecimal totalBonus = ZERO;
+        private BigDecimal totalIncome = ZERO;
 
         public void addDay(WorkDay day) {
             daysCount++;
 
-            // Безопасное извлечение значений
-            BigDecimal salary = safeGetBigDecimal(day.getSalary());
-            BigDecimal bonus = safeGetBigDecimal(day.getBonus());
+            BigDecimal salary = day.getSalary() != null ? day.getSalary() : ZERO;
+            BigDecimal bonus = day.getBonus() != null ? day.getBonus() : ZERO;
 
-            // Сложение
             totalSalary = totalSalary.add(salary);
             totalBonus = totalBonus.add(bonus);
             totalIncome = totalIncome.add(salary).add(bonus);
@@ -172,10 +183,6 @@ public class ReportService {
                     " | salary: " + salary +
                     " | bonus: " + bonus +
                     " | totalIncome: " + totalIncome);
-        }
-
-        private BigDecimal safeGetBigDecimal(BigDecimal value) {
-            return value != null ? value : BigDecimal.ZERO;
         }
 
         public int getDaysCount() { return daysCount; }
