@@ -43,8 +43,8 @@ async function login(username, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
         });
 
         const result = await response.json();
@@ -102,7 +102,9 @@ function showLoginForm() {
 function showMessage(text, type = 'success') {
     messageDiv.textContent = text;
     messageDiv.className = `message ${type}`;
-    setTimeout(() => { messageDiv.className = 'message'; }, 2000);
+    setTimeout(() => {
+        messageDiv.className = 'message';
+    }, 2000);
 }
 
 function formatDate(dateString) {
@@ -258,7 +260,7 @@ async function loadWorkdays() {
             return;
         }
 
-        const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+        const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
         const monthGroupsArray = workdays.reduce((acc, day) => {
             const date = new Date(day.workDate);
@@ -410,7 +412,7 @@ async function loadPayments() {
             }
 
             // Группируем выплаты по месяцам
-            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
             const monthGroupsArray = payments.reduce((acc, payment) => {
                 // Исправляем преобразование даты
@@ -505,7 +507,7 @@ async function loadPayments() {
             console.error('❌ Ошибка HTTP:', response.status);
             paymentsContainer.innerHTML = '<div class="loading">Ошибка загрузки выплат</div>';
         }
-    } catch(error) {
+    } catch (error) {
         console.error('❌ Ошибка при загрузке выплат:', error);
         paymentsContainer.innerHTML = '<div class="loading">Ошибка соединения</div>';
     }
@@ -557,61 +559,14 @@ function togglePaymentsList() {
 }
 
 function showSuccessImage() {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.7);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-    `;
+    const overlay = document.getElementById('successImage');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 1200);
+    }
 
-    const container = document.createElement('div');
-    container.style.cssText = `
-        background: white;
-        padding: 30px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(0,0,0,0.3);
-    `;
-
-    const img = document.createElement('img');
-    img.src = 'images/успех.jpg';
-    img.alt = 'Успех';
-    img.style.cssText = `
-        max-width: 300px;
-        max-height: 300px;
-        display: block;
-        margin: 0 auto 20px;
-    `;
-
-    const text = document.createElement('div');
-    text.textContent = 'Успешно!';
-    text.style.cssText = `
-        font-size: 24px;
-        font-weight: bold;
-        color: #4CAF50;
-    `;
-
-    container.appendChild(img);
-    container.appendChild(text);
-    overlay.appendChild(container);
-    document.body.appendChild(overlay);
-
-    overlay.addEventListener('click', function() {
-        document.body.removeChild(overlay);
-    });
-
-    setTimeout(() => {
-        if (document.body.contains(overlay)) {
-            document.body.removeChild(overlay);
-        }
-    }, 1200);
 }
 
 // ===== ДОБАВЛЕНИЕ ДАННЫХ =====
@@ -621,9 +576,9 @@ async function addWorkday(workdayData) {
         workdayData.bonus = parseInt(workdayData.bonus) || 0;
 
         const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(workdayData)
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(workdayData)
         });
         if (res.ok) {
             const saved = await res.json();
@@ -638,16 +593,18 @@ async function addWorkday(workdayData) {
             const error = await res.json();
             showMessage(error.message || 'Ошибка', 'error');
         }
-    } catch(e){ showMessage('Ошибка соединения', 'error'); }
+    } catch (e) {
+        showMessage('Ошибка соединения', 'error');
+    }
 }
 
 async function addSalaryPayment(paymentData) {
     if (!currentUser) return;
     try {
         const res = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(paymentData)
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(paymentData)
         });
         if (res.ok) {
             showSuccessImage();
@@ -661,23 +618,37 @@ async function addSalaryPayment(paymentData) {
             const error = await res.json();
             showMessage(error.message || 'Ошибка', 'error');
         }
-    } catch(e){ showMessage('Ошибка соединения', 'error'); }
+    } catch (e) {
+        showMessage('Ошибка соединения', 'error');
+    }
 }
 
 async function deleteWorkday(id) {
     if (!currentUser || !confirm('Удалить день?')) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/workdays/${id}?userId=${currentUser.userId}`, { method:'DELETE' });
-        if (res.ok) { showMessage('День удален'); loadWorkdays(); updateSummary(); }
-    } catch(e){ showMessage('Ошибка удаления', 'error'); }
+        const res = await fetch(`${API_BASE_URL}/workdays/${id}?userId=${currentUser.userId}`, {method: 'DELETE'});
+        if (res.ok) {
+            showMessage('День удален');
+            loadWorkdays();
+            updateSummary();
+        }
+    } catch (e) {
+        showMessage('Ошибка удаления', 'error');
+    }
 }
 
 async function deletePayment(id) {
     if (!currentUser || !confirm('Удалить выплату?')) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/payments/${id}?userId=${currentUser.userId}`, { method:'DELETE' });
-        if (res.ok) { showMessage('Выплата удалена'); loadPayments(); updateSummary(); }
-    } catch(e){ showMessage('Ошибка удаления', 'error'); }
+        const res = await fetch(`${API_BASE_URL}/payments/${id}?userId=${currentUser.userId}`, {method: 'DELETE'});
+        if (res.ok) {
+            showMessage('Выплата удалена');
+            loadPayments();
+            updateSummary();
+        }
+    } catch (e) {
+        showMessage('Ошибка удаления', 'error');
+    }
 }
 
 // ===== ОТЧЕТЫ =====
@@ -702,14 +673,14 @@ function initYearSelector() {
 }
 
 function setupReportEventListeners() {
-    reportTypeSelect.addEventListener('change', function() {
+    reportTypeSelect.addEventListener('change', function () {
         const isMonthlyReport = this.value === 'monthly';
         monthField.style.display = isMonthlyReport ? 'block' : 'none';
     });
 
     generateReportBtn.addEventListener('click', generateReport);
     exportReportBtn.addEventListener('click', exportReport);
-    closeReportBtn.addEventListener('click', function() {
+    closeReportBtn.addEventListener('click', function () {
         reportContainer.style.display = 'none';
     });
 }
@@ -729,6 +700,8 @@ async function generateReport() {
 
         if (reportType === 'monthly') {
             url += `monthly?userId=${currentUser.userId}&year=${year}&month=${month}`;
+        } else if (reportType === 'full-daily') {
+            url += `full-daily?userId=${currentUser.userId}`;
         } else {
             url += `${reportType}?userId=${currentUser.userId}&year=${year}`;
         }
@@ -760,6 +733,9 @@ function displayReport(reportType, data, year, month) {
             break;
         case 'annual':
             displayAnnualReport(data, year);
+            break;
+        case 'full-daily':
+            displayFullDailyReport(data);
             break;
     }
 }
@@ -798,17 +774,20 @@ function displayMonthlyReport(data, year, month) {
 
     if (data.workDays && data.workDays.length > 0) {
         html += '<h3 style="margin-bottom: 15px;">Детализация по дням</h3>';
-        data.workDays.forEach(day => {
+        // Сортируем дни по дате (новые сверху)
+        const sortedDays = [...data.workDays].sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+
+        sortedDays.forEach(day => {
             html += `
-                <div class="detailed-day">
-                    <div class="day-header">
-                        <span class="day-date">${formatDate(day.workDate)}</span>
-                        <div class="day-income">
-                            <span class="workday-salary">${formatMoney(day.salary)}</span>
-                            ${day.bonus > 0 ? `<span class="workday-bonus">+${formatMoney(day.bonus)}</span>` : ''}
-                        </div>
+                <div class="detailed-day" style="padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; color: #333;">${formatDate(day.workDate)}</div>
+                        <div style="color: #666; font-size: 12px; margin-top: 2px;">${day.description || 'Рабочий день'}</div>
                     </div>
-                    <div class="day-description">${day.description || 'Рабочий день'}</div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: bold; color: #28a745;">${formatMoney(day.salary)}</div>
+                        ${day.bonus > 0 ? `<div style="color: #ffc107; font-size: 12px;">+${formatMoney(day.bonus)}</div>` : ''}
+                    </div>
                 </div>
             `;
         });
@@ -878,43 +857,260 @@ function displayAnnualReport(data, year) {
     reportContent.innerHTML = html;
 }
 
+function displayFullDailyReport(data) {
+    reportTitle.textContent = `Полный отчет по всем рабочим дням`;
+
+    let html = `
+        <div class="full-report-summary" style="margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${data.totalDays || 0}</div>
+                    <div class="stat-label">Всего дней</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalSalary || 0)}</div>
+                    <div class="stat-label">Общая зарплата</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalBonus || 0)}</div>
+                    <div class="stat-label">Общие бонусы</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalIncome || 0)}</div>
+                    <div class="stat-label">Общий доход</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (data.workDays && data.workDays.length > 0) {
+        // Группируем дни по годам и месяцам для удобства просмотра
+        const groupedDays = groupDaysByYearMonth(data.workDays);
+
+        // Сортируем группы по году и месяцу (новые сверху)
+        const sortedGroups = Object.keys(groupedDays).sort((a, b) => {
+            const [yearA, monthA] = a.split('-').map(Number);
+            const [yearB, monthB] = b.split('-').map(Number);
+            return yearB - yearA || monthB - monthA;
+        });
+
+        sortedGroups.forEach(yearMonth => {
+            const group = groupedDays[yearMonth];
+            html += `
+                <div class="year-month-group" style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; padding: 12px;">
+                    <h3 style="margin: 0 0 12px 0; color: #333; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 16px;">
+                        ${group.yearMonthName}
+                        <span style="float: right; font-size: 13px; color: #666;">
+                            ${group.days.length} дней • ${formatMoney(group.totalIncome)}
+                        </span>
+                    </h3>
+                    <div class="compact-days-list">
+            `;
+
+            // Дни внутри группы уже отсортированы по убыванию даты (новые сверху)
+            group.days.forEach(day => {
+                html += `
+                    <div class="compact-day-item" style="padding: 6px 8px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; font-size: 13px; line-height: 1.3;">
+                        <div style="flex: 1;">
+                            <span style="font-weight: 500; color: #333;">${formatDate(day.workDate)}</span>
+                            <span style="color: #666; font-size: 12px; margin-left: 8px;">${day.description || 'Рабочий день'}</span>
+                        </div>
+                        <div style="text-align: right; white-space: nowrap;">
+                            <span style="font-weight: 600; color: #28a745;">${formatMoney(day.salary)}</span>
+                            ${day.bonus > 0 ? `<span style="color: #ffc107; font-size: 12px; margin-left: 6px;">+${formatMoney(day.bonus)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<div class="empty-state"><div>📭</div><h3>Нет рабочих дней</h3><p>Не было добавлено ни одного рабочего дня</p></div>';
+    }
+
+    reportContent.innerHTML = html;
+}
+
+// Вспомогательная функция для группировки дней по годам и месяцам
+function groupDaysByYearMonth(workDays) {
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+    const groups = {};
+
+    workDays.forEach(day => {
+        const date = new Date(day.workDate);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const yearMonthKey = `${year}-${month}`;
+        const yearMonthName = `${monthNames[month]} ${year}`;
+
+        if (!groups[yearMonthKey]) {
+            groups[yearMonthKey] = {
+                yearMonthName: yearMonthName,
+                days: [],
+                totalSalary: 0,
+                totalBonus: 0,
+                totalIncome: 0
+            };
+        }
+
+        groups[yearMonthKey].days.push(day);
+        groups[yearMonthKey].totalSalary += day.salary || 0;
+        groups[yearMonthKey].totalBonus += day.bonus || 0;
+        groups[yearMonthKey].totalIncome += (day.salary || 0) + (day.bonus || 0);
+    });
+
+    // Сортируем дни внутри каждой группы по дате (новые сверху)
+    Object.keys(groups).forEach(key => {
+        groups[key].days.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+    });
+
+    return groups;
+}
+
 function exportReport() {
     const reportTitleText = reportTitle.textContent;
     const reportContentHtml = reportContent.innerHTML;
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = `
-        <h1>${reportTitleText}</h1>
-        <div>${reportContentHtml}</div>
-        <div style="margin-top: 20px; font-size: 12px; color: #666;">
-            Сгенерировано: ${new Date().toLocaleString('ru-RU')}
-        </div>
+    // Создаем HTML для печати/экспорта
+    const printHtml = `
+        <!DOCTYPE html>
+        <html lang="ru">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${reportTitleText}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 20px; 
+                    line-height: 1.4;
+                    color: #333;
+                }
+                .report-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 15px;
+                }
+                .report-header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    color: #2c3e50;
+                }
+                .summary-stats {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 25px;
+                    text-align: center;
+                }
+                .stat-item {
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                }
+                .stat-value {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                }
+                .stat-label {
+                    font-size: 12px;
+                    color: #666;
+                    margin-top: 5px;
+                }
+                .month-group {
+                    margin-bottom: 20px;
+                    page-break-inside: avoid;
+                }
+                .month-header {
+                    background: #f8f9fa;
+                    padding: 8px 12px;
+                    border: 1px solid #dee2e6;
+                    border-radius: 4px;
+                    margin-bottom: 8px;
+                    font-weight: bold;
+                }
+                .compact-day-item {
+                    padding: 4px 6px;
+                    border-bottom: 1px solid #eee;
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                    font-size: 12px;
+                }
+                th, td {
+                    padding: 6px 8px;
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                }
+                th {
+                    background-color: #f8f9fa;
+                    font-weight: bold;
+                }
+                .report-footer {
+                    margin-top: 30px;
+                    padding-top: 15px;
+                    border-top: 1px solid #ddd;
+                    font-size: 11px;
+                    color: #666;
+                    text-align: center;
+                }
+                @media print {
+                    body { margin: 15px; }
+                    .no-print { display: none; }
+                    .month-group { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="report-header">
+                <h1>${reportTitleText}</h1>
+                <div style="font-size: 14px; color: #666;">
+                    Сгенерировано: ${new Date().toLocaleString('ru-RU')}
+                </div>
+            </div>
+            <div>${reportContentHtml}</div>
+            <div class="report-footer">
+                Отчет сгенерирован в системе учета рабочих дней и зарплаты
+            </div>
+            
+            <div class="no-print" style="margin-top: 30px; text-align: center;">
+                <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                    🖨️ Печать
+                </button>
+                <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                    ✕ Закрыть
+                </button>
+            </div>
+
+            <script>
+                // Автоматически открыть диалог печати
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            </script>
+        </body>
+        </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>${reportTitleText}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                    th { background-color: #f5f5f5; }
-                    .month-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-                    .stat-item { text-align: center; margin-bottom: 10px; }
-                    @media print {
-                        button { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${tempDiv.innerHTML}
-            </body>
-        </html>
-    `);
+    const printWindow = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes');
+    printWindow.document.write(printHtml);
     printWindow.document.close();
+
+    // Фокус на новом окне
+    printWindow.focus();
 }
 
 // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====

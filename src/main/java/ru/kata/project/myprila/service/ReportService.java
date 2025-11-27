@@ -2,9 +2,7 @@ package ru.kata.project.myprila.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.kata.project.myprila.dto.AnnualReportDTO;
-import ru.kata.project.myprila.dto.MonthlyDetailedReportDTO;
-import ru.kata.project.myprila.dto.MonthlyReportDTO;
+import ru.kata.project.myprila.dto.*;
 import ru.kata.project.myprila.entity.WorkDay;
 import ru.kata.project.myprila.repo.WorkDayReposytory;
 
@@ -23,9 +21,38 @@ public class ReportService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
-    /**
-     * Отчет по месяцам за год
-     */
+
+
+
+    public FullDailyReportDTO getFullDailyReport(Long userId) {
+        List<WorkDay> workDays = workDayRepository.findByUserIdOrderByWorkDateDesc(userId);
+
+        // Конвертируем в DTO
+        List<DailyReportDTO> dailyReportDTOs = workDays.stream()
+                .map(workDay -> new DailyReportDTO(
+                        workDay.getId(),
+                        workDay.getWorkDate(),
+                        workDay.getDescription(),
+                        workDay.getSalary(),
+                        workDay.getBonus()
+                ))
+                .collect(Collectors.toList());
+
+        // Рассчитываем статистику
+        int totalDays = workDays.size();
+        BigDecimal totalSalary = workDays.stream()
+                .map(WorkDay::getSalary)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalBonus = workDays.stream()
+                .map(WorkDay::getBonus)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalIncome = totalSalary.add(totalBonus);
+        BigDecimal averagePerDay = totalDays > 0 ?
+                totalIncome.divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        return new FullDailyReportDTO(totalDays, totalSalary, totalBonus, totalIncome, averagePerDay, dailyReportDTOs);
+    }
     public List<MonthlyReportDTO> getMonthlyReport(Long userId, Integer year) {
         validateUserId(userId);
 
