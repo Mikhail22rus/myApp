@@ -37,6 +37,7 @@ const closeReportBtn = document.getElementById('closeReport');
 // Переменные для управления состоянием
 let isWorkdaysListCollapsed = true;
 let isPaymentsListCollapsed = true;
+let totalAllPayments = 0;
 
 // ===== АВТОРИЗАЦИЯ =====
 async function login(username, password) {
@@ -91,6 +92,9 @@ function showMainContent() {
     loadPayments();
     updateSummary();
     initReports();
+
+    // Загружаем общую сумму выплат
+    displayTotalAllPayments();
 }
 
 function showLoginForm() {
@@ -133,6 +137,13 @@ async function updateSummary() {
     try {
         const currentMonthData = await loadCurrentMonthSummary();
         displayCurrentMonthSummary(currentMonthData);
+
+        // Загружаем общую сумму всех выплат для сводки
+        const allTimeTotal = await calculateTotalAllPayments();
+        const allTimeElement = document.getElementById('allTimeTotalPaid');
+        if (allTimeElement) {
+            allTimeElement.textContent = formatMoney(allTimeTotal);
+        }
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
         showMessage('Ошибка загрузки финансовой сводки', 'error');
@@ -240,6 +251,69 @@ function displayCurrentMonthSummary(data) {
     salaryBalanceSpan.className = `summary-value ${data.currentBalance > 0 ? 'balance-positive' : data.currentBalance < 0 ? 'balance-negative' : ''}`;
 
     document.querySelector('.summary-card h2').textContent = `📊 ${data.monthName}`;
+}
+
+// ===== ОБЩАЯ СУММА ВСЕХ ВЫПЛАТ =====
+async function calculateTotalAllPayments() {
+    if (!currentUser) return 0;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
+        if (response.ok) {
+            const payments = await response.json();
+
+            // Суммируем все выплаты
+            totalAllPayments = payments.reduce((total, payment) => {
+                return total + (parseFloat(payment.amount) || 0);
+            }, 0);
+
+            return totalAllPayments;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Ошибка расчета общей суммы выплат:', error);
+        return 0;
+    }
+}
+
+// Функция для отображения общей суммы выплат
+async function displayTotalAllPayments() {
+    const total = await calculateTotalAllPayments();
+
+    // Создаем или находим элемент для отображения общей суммы
+    let totalPaymentsElement = document.getElementById('totalAllPayments');
+
+    if (!totalPaymentsElement) {
+        // Создаем элемент для отображения общей суммы
+        const paymentsControls = document.getElementById('paymentsControls');
+        if (paymentsControls) {
+            totalPaymentsElement = document.createElement('div');
+            totalPaymentsElement.id = 'totalAllPayments';
+            totalPaymentsElement.className = 'total-all-payments';
+            totalPaymentsElement.innerHTML = `
+                <div class="total-payments-card">
+                    <div class="total-payments-title">💰 Общая сумма всех выплат:</div>
+                    <div class="total-payments-amount">${formatMoney(total)}</div>
+                    <button onclick="loadTotalAllPayments()" class="btn btn-success refresh-total-btn">🔄 Обновить</button>
+                </div>
+            `;
+
+            // Вставляем перед кнопками управления
+            paymentsControls.insertBefore(totalPaymentsElement, paymentsControls.firstChild);
+        }
+    } else {
+        // Обновляем существующий элемент
+        const amountElement = totalPaymentsElement.querySelector('.total-payments-amount');
+        if (amountElement) {
+            amountElement.textContent = formatMoney(total);
+        }
+    }
+}
+
+// Функция для обновления общей суммы (будет вызвана по кнопке)
+async function loadTotalAllPayments() {
+    showMessage('Обновление общей суммы выплат...', 'success');
+    await displayTotalAllPayments();
 }
 
 // ===== РАБОЧИЕ ДНИ =====
@@ -403,6 +477,14 @@ async function loadPayments() {
         if (response.ok) {
             const payments = await response.json();
             console.log('✅ Получены выплаты:', payments);
+
+            // ОБНОВЛЯЕМ ОБЩУЮ СУММУ
+            totalAllPayments = payments.reduce((total, payment) => {
+                return total + (parseFloat(payment.amount) || 0);
+            }, 0);
+
+            // Отображаем общую сумму
+            displayTotalAllPayments();
 
             if (!payments || !payments.length) {
                 paymentsContainer.innerHTML = '<div class="empty-state">💸 Нет выплат</div>';
@@ -1162,6 +1244,11 @@ tabs.forEach(tab => {
         tabContents.forEach(c => c.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.getAttribute('data-tab') + 'Tab').classList.add('active');
+
+        // При переключении на вкладку выплат обновляем общую сумму
+        if (tab.getAttribute('data-tab') === 'payments') {
+            displayTotalAllPayments();
+        }
     });
 });
 
@@ -1180,3 +1267,4 @@ window.deletePayment = deletePayment;
 window.logout = logout;
 window.toggleWorkdaysList = toggleWorkdaysList;
 window.togglePaymentsList = togglePaymentsList;
+window.loadTotalAllPayments = loadTotalAllPayments;

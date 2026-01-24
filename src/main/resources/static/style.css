@@ -115,6 +115,83 @@ h1 {
     font-weight: bold;
 }
 
+/* Стили для общей суммы выплат */
+.total-all-payments {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.total-payments-card {
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.total-payments-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 200px;
+}
+
+.total-payments-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    flex: 1;
+    text-align: center;
+    min-width: 200px;
+}
+
+.refresh-total-btn {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 2px solid white !important;
+    color: white !important;
+    padding: 8px 15px !important;
+    border-radius: 20px !important;
+    font-size: 0.9rem !important;
+    width: auto !important;
+    min-width: 120px !important;
+    transition: all 0.3s ease !important;
+}
+
+.refresh-total-btn:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Адаптивность для общей суммы */
+@media (max-width: 768px) {
+    .total-payments-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 12px;
+    }
+
+    .total-payments-title {
+        min-width: 100%;
+        margin-bottom: 5px;
+        font-size: 1rem;
+    }
+
+    .total-payments-amount {
+        min-width: 100%;
+        margin-bottom: 10px;
+        font-size: 1.5rem;
+    }
+
+    .refresh-total-btn {
+        min-width: 100%;
+    }
+}
+
 .forms-row {
     display: grid;
     grid-template-columns: 1fr;
