@@ -65,6 +65,10 @@
                     <div class="summary-label">Отработано дней</div>
                 </div>
                 <div class="summary-item">
+                    <div class="summary-value" id="allTimeTotalPaid">0 ₽</div>
+                    <div class="summary-label">Всего выплат за все время</div>
+                </div>
+                <div class="summary-item">
                     <div class="summary-value" id="totalEarned">0 ₽</div>
                     <div class="summary-label">Заработок</div>
                 </div>
@@ -110,6 +114,11 @@
             <div class="salary-payment-form">
                 <h3>💵 Получил зарплату</h3>
                 <form id="salaryPaymentForm">
+
+                    <div class="form-group">
+                        <label for="paymentDate">📅 Дата выплаты:</label>
+                        <input type="date" id="paymentDate" name="paymentDate" required>
+                    </div>
                     <div class="form-group">
                         <label for="amount">💰 Сумма (руб):</label>
                         <input type="number" id="amount" name="amount" min="1" required placeholder="Введите сумму">
@@ -161,7 +170,8 @@
                 <div class="form-group">
                     <label for="reportType">Тип отчета:</label>
                     <select id="reportType" class="form-control">
-                        <option value="monthly">📅 Отчет по месяцам</option>
+                        <option value="full-daily">Полный отчет по дням</option>
+
                         <option value="annual">📊 Годовой отчет</option>
                     </select>
                 </div>
@@ -206,13 +216,9 @@
         </div>
     </div>
 </div>
-
 <script src="script.js"></script>
-<div id="successImage" class="success-image-overlay" style="display: none;">
-    <div class="success-image-container">
-        <img id="successImg" src="/images/успех.jpg" alt="Успех">
-        <div class="success-text">Успешно!</div>
-    </div>
-</div>
+<script src="reports.js"></script>
+
+
 </body>
 </html>

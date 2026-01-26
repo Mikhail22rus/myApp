@@ -32,17 +32,20 @@ const reportContainer = document.getElementById('reportContainer');
 const reportTitle = document.getElementById('reportTitle');
 const reportContent = document.getElementById('reportContent');
 const exportReportBtn = document.getElementById('exportReport');
+const closeReportBtn = document.getElementById('closeReport');
 
 // Переменные для управления состоянием
 let isWorkdaysListCollapsed = true;
+let isPaymentsListCollapsed = true;
+let totalAllPayments = 0;
 
 // ===== АВТОРИЗАЦИЯ =====
 async function login(username, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
         });
 
         const result = await response.json();
@@ -89,6 +92,9 @@ function showMainContent() {
     loadPayments();
     updateSummary();
     initReports();
+
+    // Загружаем общую сумму выплат
+    displayTotalAllPayments();
 }
 
 function showLoginForm() {
@@ -100,7 +106,9 @@ function showLoginForm() {
 function showMessage(text, type = 'success') {
     messageDiv.textContent = text;
     messageDiv.className = `message ${type}`;
-    setTimeout(() => { messageDiv.className = 'message'; }, 5000);
+    setTimeout(() => {
+        messageDiv.className = 'message';
+    }, 2000);
 }
 
 function formatDate(dateString) {
@@ -129,6 +137,13 @@ async function updateSummary() {
     try {
         const currentMonthData = await loadCurrentMonthSummary();
         displayCurrentMonthSummary(currentMonthData);
+
+        // Загружаем общую сумму всех выплат для сводки
+        const allTimeTotal = await calculateTotalAllPayments();
+        const allTimeElement = document.getElementById('allTimeTotalPaid');
+        if (allTimeElement) {
+            allTimeElement.textContent = formatMoney(allTimeTotal);
+        }
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
         showMessage('Ошибка загрузки финансовой сводки', 'error');
@@ -238,6 +253,69 @@ function displayCurrentMonthSummary(data) {
     document.querySelector('.summary-card h2').textContent = `📊 ${data.monthName}`;
 }
 
+// ===== ОБЩАЯ СУММА ВСЕХ ВЫПЛАТ =====
+async function calculateTotalAllPayments() {
+    if (!currentUser) return 0;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
+        if (response.ok) {
+            const payments = await response.json();
+
+            // Суммируем все выплаты
+            totalAllPayments = payments.reduce((total, payment) => {
+                return total + (parseFloat(payment.amount) || 0);
+            }, 0);
+
+            return totalAllPayments;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Ошибка расчета общей суммы выплат:', error);
+        return 0;
+    }
+}
+
+// Функция для отображения общей суммы выплат
+async function displayTotalAllPayments() {
+    const total = await calculateTotalAllPayments();
+
+    // Создаем или находим элемент для отображения общей суммы
+    let totalPaymentsElement = document.getElementById('totalAllPayments');
+
+    if (!totalPaymentsElement) {
+        // Создаем элемент для отображения общей суммы
+        const paymentsControls = document.getElementById('paymentsControls');
+        if (paymentsControls) {
+            totalPaymentsElement = document.createElement('div');
+            totalPaymentsElement.id = 'totalAllPayments';
+            totalPaymentsElement.className = 'total-all-payments';
+            totalPaymentsElement.innerHTML = `
+                <div class="total-payments-card">
+                    <div class="total-payments-title">💰 Общая сумма всех выплат:</div>
+                    <div class="total-payments-amount">${formatMoney(total)}</div>
+                    <button onclick="loadTotalAllPayments()" class="btn btn-success refresh-total-btn">🔄 Обновить</button>
+                </div>
+            `;
+
+            // Вставляем перед кнопками управления
+            paymentsControls.insertBefore(totalPaymentsElement, paymentsControls.firstChild);
+        }
+    } else {
+        // Обновляем существующий элемент
+        const amountElement = totalPaymentsElement.querySelector('.total-payments-amount');
+        if (amountElement) {
+            amountElement.textContent = formatMoney(total);
+        }
+    }
+}
+
+// Функция для обновления общей суммы (будет вызвана по кнопке)
+async function loadTotalAllPayments() {
+    showMessage('Обновление общей суммы выплат...', 'success');
+    await displayTotalAllPayments();
+}
+
 // ===== РАБОЧИЕ ДНИ =====
 async function loadWorkdays() {
     if (!currentUser) return;
@@ -256,7 +334,7 @@ async function loadWorkdays() {
             return;
         }
 
-        const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+        const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
         const monthGroupsArray = workdays.reduce((acc, day) => {
             const date = new Date(day.workDate);
@@ -384,79 +462,195 @@ function toggleWorkdaysList() {
 
 // ===== ВЫПЛАТЫ =====
 async function loadPayments() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log('❌ Нет текущего пользователя');
+        return;
+    }
+
     try {
+        console.log('🔄 Начало загрузки выплат для пользователя:', currentUser.userId);
         paymentsContainer.innerHTML = '<div class="loading">Загрузка...</div>';
-        const res = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
-        if (res.ok) {
-            const payments = await res.json();
-            if (!payments.length) {
+
+        const response = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`);
+        console.log('📡 Ответ сервера:', response.status, response.statusText);
+
+        if (response.ok) {
+            const payments = await response.json();
+            console.log('✅ Получены выплаты:', payments);
+
+            // ОБНОВЛЯЕМ ОБЩУЮ СУММУ
+            totalAllPayments = payments.reduce((total, payment) => {
+                return total + (parseFloat(payment.amount) || 0);
+            }, 0);
+
+            // Отображаем общую сумму
+            displayTotalAllPayments();
+
+            if (!payments || !payments.length) {
                 paymentsContainer.innerHTML = '<div class="empty-state">💸 Нет выплат</div>';
+                console.log('ℹ️ Нет выплат для отображения');
+                initializeCollapsiblePayments();
                 return;
             }
-            payments.sort((a,b) => new Date(b.paymentDate) - new Date(a.paymentDate));
-            paymentsContainer.innerHTML = payments.map(p => `
-                <div class="payment-card">
-                    <div class="payment-info">
-                        <div class="payment-date">💵 ${formatDate(p.paymentDate)} <span class="payment-amount">${formatMoney(p.amount)}</span></div>
-                        <div class="payment-description">${p.description || 'Выплата'}</div>
+
+            // Группируем выплаты по месяцам
+            const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+            const monthGroupsArray = payments.reduce((acc, payment) => {
+                // Исправляем преобразование даты
+                let paymentDate;
+                if (payment.paymentDate && typeof payment.paymentDate === 'string') {
+                    paymentDate = new Date(payment.paymentDate);
+                } else {
+                    paymentDate = new Date();
+                }
+
+                const year = paymentDate.getFullYear();
+                const month = paymentDate.getMonth();
+                const monthKey = year * 12 + month;
+
+                let group = acc.find(g => g.year === year && g.month === month);
+                if (!group) {
+                    group = {
+                        year,
+                        month,
+                        monthKey,
+                        monthName: `${monthNames[month]} ${year}`,
+                        payments: [],
+                        totalAmount: 0,
+                        paymentsCount: 0
+                    };
+                    acc.push(group);
+                }
+
+                group.payments.push(payment);
+                group.totalAmount += parseFloat(payment.amount) || 0;
+                group.paymentsCount++;
+
+                return acc;
+            }, []);
+
+            // Сортируем по дате (новые сверху)
+            monthGroupsArray.sort((a, b) => b.monthKey - a.monthKey);
+
+            paymentsContainer.innerHTML = '';
+
+            if (monthGroupsArray.length === 0) {
+                paymentsContainer.innerHTML = '<div class="empty-state">💸 Нет выплат</div>';
+                initializeCollapsiblePayments();
+                return;
+            }
+
+            monthGroupsArray.forEach(group => {
+                const div = document.createElement('div');
+                div.className = 'month-group';
+
+                // Сортируем выплаты внутри месяца (новые сверху)
+                group.payments.sort((a, b) => {
+                    const dateA = new Date(a.paymentDate);
+                    const dateB = new Date(b.paymentDate);
+                    return dateB - dateA;
+                });
+
+                div.innerHTML = `
+                    <div class="month-header">
+                        <span>${group.monthName}</span>
+                        <span class="month-total">${group.paymentsCount} выплат • ${formatMoney(group.totalAmount)}</span>
                     </div>
-                    <div class="payment-actions">
-                        <button class="btn btn-danger" onclick="deletePayment(${p.id})">🗑️ Удалить</button>
+                    <div class="month-payments">
+                        ${group.payments.map(payment => {
+                    const paymentDate = payment.paymentDate ? formatDate(payment.paymentDate) : 'Неизвестная дата';
+                    const amount = parseFloat(payment.amount) || 0;
+                    return `
+                                <div class="payment-card">
+                                    <div class="payment-info">
+                                        <div class="payment-date">
+                                            💵 ${paymentDate} 
+                                            <span class="payment-amount">${formatMoney(amount)}</span>
+                                        </div>
+                                        <div class="payment-description">${payment.description || 'Выплата'}</div>
+                                    </div>
+                                    <div class="payment-actions">
+                                        <button class="btn btn-danger" onclick="deletePayment(${payment.id})">🗑️ Удалить</button>
+                                    </div>
+                                </div>
+                            `;
+                }).join('')}
                     </div>
-                </div>
-            `).join('');
+                `;
+
+                paymentsContainer.appendChild(div);
+            });
+
+            console.log('✅ Выплаты успешно отображены');
+            initializeCollapsiblePayments();
+
+        } else {
+            console.error('❌ Ошибка HTTP:', response.status);
+            paymentsContainer.innerHTML = '<div class="loading">Ошибка загрузки выплат</div>';
         }
-    } catch(e) {
-        paymentsContainer.innerHTML = '<div class="loading">Ошибка загрузки</div>';
+    } catch (error) {
+        console.error('❌ Ошибка при загрузке выплат:', error);
+        paymentsContainer.innerHTML = '<div class="loading">Ошибка соединения</div>';
     }
 }
+
+function initializeCollapsiblePayments() {
+    const paymentsContainer = document.getElementById('paymentsContainer');
+    const loadPaymentsBtn = document.getElementById('loadPayments');
+
+    let controlsContainer = document.getElementById('paymentsControls');
+    if (!controlsContainer) {
+        controlsContainer = document.createElement('div');
+        controlsContainer.id = 'paymentsControls';
+        controlsContainer.className = 'payments-controls';
+
+        const paymentsList = paymentsContainer.parentNode;
+        paymentsList.insertBefore(controlsContainer, paymentsContainer);
+        controlsContainer.appendChild(loadPaymentsBtn);
+    }
+
+    if (!document.getElementById('togglePaymentsBtn')) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'togglePaymentsBtn';
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-info toggle-btn';
+        toggleBtn.innerHTML = '📁 Развернуть список выплат';
+        toggleBtn.onclick = togglePaymentsList;
+
+        controlsContainer.appendChild(toggleBtn);
+    }
+
+    paymentsContainer.classList.add('collapsible', 'collapsed');
+    isPaymentsListCollapsed = true;
+}
+
+function togglePaymentsList() {
+    const paymentsContainer = document.getElementById('paymentsContainer');
+    const toggleBtn = document.getElementById('togglePaymentsBtn');
+
+    if (isPaymentsListCollapsed) {
+        paymentsContainer.classList.remove('collapsed');
+        toggleBtn.innerHTML = '📂 Свернуть список выплат';
+        isPaymentsListCollapsed = false;
+    } else {
+        paymentsContainer.classList.add('collapsed');
+        toggleBtn.innerHTML = '📁 Развернуть список выплат';
+        isPaymentsListCollapsed = true;
+    }
+}
+
 function showSuccessImage() {
-    // Создаем элементы если их нет
-    let successOverlay = document.getElementById('successImage');
-
-    if (!successOverlay) {
-        successOverlay = document.createElement('div');
-        successOverlay.id = 'successImage';
-        successOverlay.className = 'success-image-overlay';
-        successOverlay.style.display = 'none';
-
-        const container = document.createElement('div');
-        container.className = 'success-image-container';
-
-        const img = document.createElement('img');
-        img.id = 'successImg';
-        img.src = '/images/успех.jpg';
-        img.alt = 'Успех';
-
-        const text = document.createElement('div');
-        text.className = 'success-text';
-        text.textContent = 'Успешно!';
-
-        container.appendChild(img);
-        container.appendChild(text);
-        successOverlay.appendChild(container);
-        document.body.appendChild(successOverlay);
-
-        // Закрытие по клику на overlay
-        successOverlay.addEventListener('click', function() {
-            this.style.display = 'none';
-        });
+    const overlay = document.getElementById('successImage');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 1200);
     }
 
-    const successImg = document.getElementById('successImg');
-
-    // Установите правильный путь к вашей картинке
-    successImg.src = '/images/успех.jpg';
-
-    // Показываем на весь экран
-    successOverlay.style.display = 'flex';
-
-    // Автоматически скрываем через 1,5 секунды
-    setTimeout(() => {
-        successOverlay.style.display = 'none';
-    }, 1500);
 }
+
 // ===== ДОБАВЛЕНИЕ ДАННЫХ =====
 async function addWorkday(workdayData) {
     if (!currentUser) return;
@@ -464,9 +658,9 @@ async function addWorkday(workdayData) {
         workdayData.bonus = parseInt(workdayData.bonus) || 0;
 
         const res = await fetch(`${API_BASE_URL}/workdays?userId=${currentUser.userId}`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(workdayData)
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(workdayData)
         });
         if (res.ok) {
             const saved = await res.json();
@@ -481,43 +675,62 @@ async function addWorkday(workdayData) {
             const error = await res.json();
             showMessage(error.message || 'Ошибка', 'error');
         }
-    } catch(e){ showMessage('Ошибка соединения', 'error'); }
+    } catch (e) {
+        showMessage('Ошибка соединения', 'error');
+    }
 }
 
 async function addSalaryPayment(paymentData) {
     if (!currentUser) return;
     try {
         const res = await fetch(`${API_BASE_URL}/payments?userId=${currentUser.userId}`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(paymentData)
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(paymentData)
         });
         if (res.ok) {
+            showSuccessImage();
             showMessage(`Выплата ${formatMoney(paymentData.amount)} добавлена!`);
             salaryPaymentForm.reset();
+            // Установите текущую дату по умолчанию после сброса формы
+            document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
             loadPayments();
             updateSummary();
         } else {
             const error = await res.json();
             showMessage(error.message || 'Ошибка', 'error');
         }
-    } catch(e){ showMessage('Ошибка соединения', 'error'); }
+    } catch (e) {
+        showMessage('Ошибка соединения', 'error');
+    }
 }
 
 async function deleteWorkday(id) {
     if (!currentUser || !confirm('Удалить день?')) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/workdays/${id}?userId=${currentUser.userId}`, { method:'DELETE' });
-        if (res.ok) { showMessage('День удален'); loadWorkdays(); updateSummary(); }
-    } catch(e){ showMessage('Ошибка удаления', 'error'); }
+        const res = await fetch(`${API_BASE_URL}/workdays/${id}?userId=${currentUser.userId}`, {method: 'DELETE'});
+        if (res.ok) {
+            showMessage('День удален');
+            loadWorkdays();
+            updateSummary();
+        }
+    } catch (e) {
+        showMessage('Ошибка удаления', 'error');
+    }
 }
 
 async function deletePayment(id) {
     if (!currentUser || !confirm('Удалить выплату?')) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/payments/${id}?userId=${currentUser.userId}`, { method:'DELETE' });
-        if (res.ok) { showMessage('Выплата удалена'); loadPayments(); updateSummary(); }
-    } catch(e){ showMessage('Ошибка удаления', 'error'); }
+        const res = await fetch(`${API_BASE_URL}/payments/${id}?userId=${currentUser.userId}`, {method: 'DELETE'});
+        if (res.ok) {
+            showMessage('Выплата удалена');
+            loadPayments();
+            updateSummary();
+        }
+    } catch (e) {
+        showMessage('Ошибка удаления', 'error');
+    }
 }
 
 // ===== ОТЧЕТЫ =====
@@ -542,16 +755,15 @@ function initYearSelector() {
 }
 
 function setupReportEventListeners() {
-    reportTypeSelect.addEventListener('change', function() {
-        const isDetailedReport = this.value === 'monthly-detailed';
-        monthField.style.display = isDetailedReport ? 'block' : 'none';
+    reportTypeSelect.addEventListener('change', function () {
+        const isMonthlyReport = this.value === 'monthly';
+        monthField.style.display = isMonthlyReport ? 'block' : 'none';
     });
 
     generateReportBtn.addEventListener('click', generateReport);
     exportReportBtn.addEventListener('click', exportReport);
-
-    document.getElementById('closeReport').addEventListener('click', function() {
-        document.getElementById('reportContainer').style.display = 'none';
+    closeReportBtn.addEventListener('click', function () {
+        reportContainer.style.display = 'none';
     });
 }
 
@@ -568,8 +780,10 @@ async function generateReport() {
 
         let url = `${API_BASE_URL}/reports/`;
 
-        if (reportType === 'monthly-detailed') {
-            url += `monthly-detailed?userId=${currentUser.userId}&year=${year}&month=${month}`;
+        if (reportType === 'monthly') {
+            url += `monthly?userId=${currentUser.userId}&year=${year}&month=${month}`;
+        } else if (reportType === 'full-daily') {
+            url += `full-daily?userId=${currentUser.userId}`;
         } else {
             url += `${reportType}?userId=${currentUser.userId}&year=${year}`;
         }
@@ -597,174 +811,65 @@ function displayReport(reportType, data, year, month) {
 
     switch (reportType) {
         case 'monthly':
-            displayMonthlyReport(data, year);
+            displayMonthlyReport(data, year, month);
             break;
         case 'annual':
             displayAnnualReport(data, year);
             break;
-        case 'monthly-detailed':
-            displayMonthlyDetailedReport(data, year, month);
+        case 'full-daily':
+            displayFullDailyReport(data);
             break;
     }
 }
 
-function displayMonthlyReport(data, year) {
-    reportTitle.textContent = `Отчет по месяцам за ${year} год`;
-
-    const monthNames = {
-        0: 'Январь', 1: 'Февраль', 2: 'Март', 3: 'Апрель', 4: 'Май', 5: 'Июнь',
-        6: 'Июль', 7: 'Август', 8: 'Сентябрь', 9: 'Октябрь', 10: 'Ноябрь', 11: 'Декабрь'
-    };
-
-    let html = '<div class="month-cards">';
-
-    data.forEach(monthReport => {
-        const hasData = monthReport.daysCount > 0;
-        const monthName = monthNames[monthReport.monthValue - 1] || monthReport.month;
-
-        html += `
-            <div class="month-card ${hasData ? 'active' : ''}">
-                <div class="month-card-header">
-                    <span class="month-name">${monthName}</span>
-                    <span class="month-days-count">${monthReport.daysCount} дней</span>
-                </div>
-                <div class="month-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">${formatMoney(monthReport.totalSalary)}</div>
-                        <div class="stat-label">Зарплата</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${formatMoney(monthReport.totalBonus)}</div>
-                        <div class="stat-label">Бонусы</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${formatMoney(monthReport.totalIncome)}</div>
-                        <div class="stat-label">Всего</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    html += '</div>';
-    reportContent.innerHTML = html;
-}
-
-function displayAnnualReport(data, year) {
-    reportTitle.textContent = `Годовой отчет за ${year} год`;
-
-    let html = `
-        <div class="annual-summary">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${data.totalDays}</div>
-                    <div class="stat-label">Всего дней</div>
-                </div>
-                <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.totalSalary)}</div>
-                    <div class="stat-label">Общая зарплата</div>
-                </div>
-                <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.totalBonus)}</div>
-                    <div class="stat-label">Общие бонусы</div>
-                </div>
-                <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.totalIncome)}</div>
-                    <div class="stat-label">Общий доход</div>
-                </div>
-                <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.averageMonthlyIncome)}</div>
-                    <div class="stat-label">Средний доход в месяц</div>
-                </div>
-            </div>
-        </div>
-        <h3 style="margin-bottom: 15px;">Детализация по месяцам</h3>
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Месяц</th>
-                    <th>Дней</th>
-                    <th>Зарплата</th>
-                    <th>Бонусы</th>
-                    <th>Всего</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    data.monthlyDetails.forEach(month => {
-        const monthNames = {
-            'JANUARY': 'Январь', 'FEBRUARY': 'Февраль', 'MARCH': 'Март', 'APRIL': 'Апрель',
-            'MAY': 'Май', 'JUNE': 'Июнь', 'JULY': 'Июль', 'AUGUST': 'Август',
-            'SEPTEMBER': 'Сентябрь', 'OCTOBER': 'Октябрь', 'NOVEMBER': 'Ноябрь', 'DECEMBER': 'Декабрь'
-        };
-
-        const monthName = monthNames[month.month] || month.month;
-
-        html += `
-            <tr>
-                <td>${monthName}</td>
-                <td>${month.daysCount}</td>
-                <td>${formatMoney(month.totalSalary)}</td>
-                <td>${formatMoney(month.totalBonus)}</td>
-                <td><strong>${formatMoney(month.totalIncome)}</strong></td>
-            </tr>
-        `;
-    });
-
-    html += `
-            </tbody>
-        </table>
-    `;
-
-    reportContent.innerHTML = html;
-}
-
-function displayMonthlyDetailedReport(data, year, month) {
+function displayMonthlyReport(data, year, month) {
     const monthNames = {
         1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель', 5: 'Май', 6: 'Июнь',
         7: 'Июль', 8: 'Август', 9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'
     };
 
     const monthName = monthNames[month];
-    reportTitle.textContent = `Детальный отчет за ${monthName} ${year} года`;
+    reportTitle.textContent = `Отчет за ${monthName} ${year} года`;
 
     let html = `
         <div class="month-summary" style="margin-bottom: 20px;">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
                 <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${data.daysCount}</div>
+                    <div class="stat-value">${data.daysCount || 0}</div>
                     <div class="stat-label">Рабочих дней</div>
                 </div>
                 <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.totalSalary)}</div>
+                    <div class="stat-value">${formatMoney(data.totalSalary || 0)}</div>
                     <div class="stat-label">Зарплата</div>
                 </div>
                 <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.totalBonus)}</div>
+                    <div class="stat-value">${formatMoney(data.totalBonus || 0)}</div>
                     <div class="stat-label">Бонусы</div>
                 </div>
                 <div class="stat-item" style="text-align: center;">
-                    <div class="stat-value">${formatMoney(data.totalIncome)}</div>
+                    <div class="stat-value">${formatMoney(data.totalIncome || 0)}</div>
                     <div class="stat-label">Всего доход</div>
                 </div>
             </div>
         </div>
-        <h3 style="margin-bottom: 15px;">Детализация по дням</h3>
     `;
 
     if (data.workDays && data.workDays.length > 0) {
-        data.workDays.forEach(day => {
+        html += '<h3 style="margin-bottom: 15px;">Детализация по дням</h3>';
+        // Сортируем дни по дате (новые сверху)
+        const sortedDays = [...data.workDays].sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+
+        sortedDays.forEach(day => {
             html += `
-                <div class="detailed-day">
-                    <div class="day-header">
-                        <span class="day-date">${formatDate(day.workDate)}</span>
-                        <div class="day-income">
-                            <span class="workday-salary">${formatMoney(day.salary)}</span>
-                            ${day.bonus > 0 ? `<span class="workday-bonus">+${formatMoney(day.bonus)}</span>` : ''}
-                        </div>
+                <div class="detailed-day" style="padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; color: #333;">${formatDate(day.workDate)}</div>
+                        <div style="color: #666; font-size: 12px; margin-top: 2px;">${day.description || 'Рабочий день'}</div>
                     </div>
-                    <div class="day-description">${day.description || 'Рабочий день'}</div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: bold; color: #28a745;">${formatMoney(day.salary)}</div>
+                        ${day.bonus > 0 ? `<div style="color: #ffc107; font-size: 12px;">+${formatMoney(day.bonus)}</div>` : ''}
+                    </div>
                 </div>
             `;
         });
@@ -775,56 +880,319 @@ function displayMonthlyDetailedReport(data, year, month) {
     reportContent.innerHTML = html;
 }
 
+function displayAnnualReport(data, year) {
+    reportTitle.textContent = `Годовой отчет за ${year} год`;
+
+    let html = `
+        <div class="annual-summary">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${data.totalDays || 0}</div>
+                    <div class="stat-label">Всего дней</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalSalary || 0)}</div>
+                    <div class="stat-label">Общая зарплата</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalBonus || 0)}</div>
+                    <div class="stat-label">Общие бонусы</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalIncome || 0)}</div>
+                    <div class="stat-label">Общий доход</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.averageMonthlyIncome || 0)}</div>
+                    <div class="stat-label">Средний доход в месяц</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (data.monthlyDetails && data.monthlyDetails.length > 0) {
+        html += '<h3 style="margin-bottom: 15px;">Детализация по месяцам</h3>';
+        html += '<table class="report-table"><thead><tr><th>Месяц</th><th>Дней</th><th>Зарплата</th><th>Бонусы</th><th>Всего</th></tr></thead><tbody>';
+
+        data.monthlyDetails.forEach(month => {
+            const monthNames = {
+                'JANUARY': 'Январь', 'FEBRUARY': 'Февраль', 'MARCH': 'Март', 'APRIL': 'Апрель',
+                'MAY': 'Май', 'JUNE': 'Июнь', 'JULY': 'Июль', 'AUGUST': 'Август',
+                'SEPTEMBER': 'Сентябрь', 'OCTOBER': 'Октябрь', 'NOVEMBER': 'Ноябрь', 'DECEMBER': 'Декабрь'
+            };
+
+            const monthName = monthNames[month.month] || month.month;
+            html += `
+                <tr>
+                    <td>${monthName}</td>
+                    <td>${month.daysCount}</td>
+                    <td>${formatMoney(month.totalSalary)}</td>
+                    <td>${formatMoney(month.totalBonus)}</td>
+                    <td><strong>${formatMoney(month.totalIncome)}</strong></td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+    }
+
+    reportContent.innerHTML = html;
+}
+
+function displayFullDailyReport(data) {
+    reportTitle.textContent = `Полный отчет по всем рабочим дням`;
+
+    let html = `
+        <div class="full-report-summary" style="margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${data.totalDays || 0}</div>
+                    <div class="stat-label">Всего дней</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalSalary || 0)}</div>
+                    <div class="stat-label">Общая зарплата</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalBonus || 0)}</div>
+                    <div class="stat-label">Общие бонусы</div>
+                </div>
+                <div class="stat-item" style="text-align: center;">
+                    <div class="stat-value">${formatMoney(data.totalIncome || 0)}</div>
+                    <div class="stat-label">Общий доход</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (data.workDays && data.workDays.length > 0) {
+        // Группируем дни по годам и месяцам для удобства просмотра
+        const groupedDays = groupDaysByYearMonth(data.workDays);
+
+        // Сортируем группы по году и месяцу (новые сверху)
+        const sortedGroups = Object.keys(groupedDays).sort((a, b) => {
+            const [yearA, monthA] = a.split('-').map(Number);
+            const [yearB, monthB] = b.split('-').map(Number);
+            return yearB - yearA || monthB - monthA;
+        });
+
+        sortedGroups.forEach(yearMonth => {
+            const group = groupedDays[yearMonth];
+            html += `
+                <div class="year-month-group" style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; padding: 12px;">
+                    <h3 style="margin: 0 0 12px 0; color: #333; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 16px;">
+                        ${group.yearMonthName}
+                        <span style="float: right; font-size: 13px; color: #666;">
+                            ${group.days.length} дней • ${formatMoney(group.totalIncome)}
+                        </span>
+                    </h3>
+                    <div class="compact-days-list">
+            `;
+
+            // Дни внутри группы уже отсортированы по убыванию даты (новые сверху)
+            group.days.forEach(day => {
+                html += `
+                    <div class="compact-day-item" style="padding: 6px 8px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; font-size: 13px; line-height: 1.3;">
+                        <div style="flex: 1;">
+                            <span style="font-weight: 500; color: #333;">${formatDate(day.workDate)}</span>
+                            <span style="color: #666; font-size: 12px; margin-left: 8px;">${day.description || 'Рабочий день'}</span>
+                        </div>
+                        <div style="text-align: right; white-space: nowrap;">
+                            <span style="font-weight: 600; color: #28a745;">${formatMoney(day.salary)}</span>
+                            ${day.bonus > 0 ? `<span style="color: #ffc107; font-size: 12px; margin-left: 6px;">+${formatMoney(day.bonus)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<div class="empty-state"><div>📭</div><h3>Нет рабочих дней</h3><p>Не было добавлено ни одного рабочего дня</p></div>';
+    }
+
+    reportContent.innerHTML = html;
+}
+
+// Вспомогательная функция для группировки дней по годам и месяцам
+function groupDaysByYearMonth(workDays) {
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+    const groups = {};
+
+    workDays.forEach(day => {
+        const date = new Date(day.workDate);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const yearMonthKey = `${year}-${month}`;
+        const yearMonthName = `${monthNames[month]} ${year}`;
+
+        if (!groups[yearMonthKey]) {
+            groups[yearMonthKey] = {
+                yearMonthName: yearMonthName,
+                days: [],
+                totalSalary: 0,
+                totalBonus: 0,
+                totalIncome: 0
+            };
+        }
+
+        groups[yearMonthKey].days.push(day);
+        groups[yearMonthKey].totalSalary += day.salary || 0;
+        groups[yearMonthKey].totalBonus += day.bonus || 0;
+        groups[yearMonthKey].totalIncome += (day.salary || 0) + (day.bonus || 0);
+    });
+
+    // Сортируем дни внутри каждой группы по дате (новые сверху)
+    Object.keys(groups).forEach(key => {
+        groups[key].days.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+    });
+
+    return groups;
+}
+
 function exportReport() {
     const reportTitleText = reportTitle.textContent;
     const reportContentHtml = reportContent.innerHTML;
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = `
-        <h1>${reportTitleText}</h1>
-        <div>${reportContentHtml}</div>
-        <div style="margin-top: 20px; font-size: 12px; color: #666;">
-            Сгенерировано: ${new Date().toLocaleString('ru-RU')}
-        </div>
-        <div style="margin-top: 20px; text-align: center;">
-            <button onclick="window.close()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Закрыть окно</button>
-        </div>
+    // Создаем HTML для печати/экспорта
+    const printHtml = `
+        <!DOCTYPE html>
+        <html lang="ru">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${reportTitleText}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 20px; 
+                    line-height: 1.4;
+                    color: #333;
+                }
+                .report-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 15px;
+                }
+                .report-header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    color: #2c3e50;
+                }
+                .summary-stats {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 25px;
+                    text-align: center;
+                }
+                .stat-item {
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                }
+                .stat-value {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                }
+                .stat-label {
+                    font-size: 12px;
+                    color: #666;
+                    margin-top: 5px;
+                }
+                .month-group {
+                    margin-bottom: 20px;
+                    page-break-inside: avoid;
+                }
+                .month-header {
+                    background: #f8f9fa;
+                    padding: 8px 12px;
+                    border: 1px solid #dee2e6;
+                    border-radius: 4px;
+                    margin-bottom: 8px;
+                    font-weight: bold;
+                }
+                .compact-day-item {
+                    padding: 4px 6px;
+                    border-bottom: 1px solid #eee;
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                    font-size: 12px;
+                }
+                th, td {
+                    padding: 6px 8px;
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                }
+                th {
+                    background-color: #f8f9fa;
+                    font-weight: bold;
+                }
+                .report-footer {
+                    margin-top: 30px;
+                    padding-top: 15px;
+                    border-top: 1px solid #ddd;
+                    font-size: 11px;
+                    color: #666;
+                    text-align: center;
+                }
+                @media print {
+                    body { margin: 15px; }
+                    .no-print { display: none; }
+                    .month-group { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="report-header">
+                <h1>${reportTitleText}</h1>
+                <div style="font-size: 14px; color: #666;">
+                    Сгенерировано: ${new Date().toLocaleString('ru-RU')}
+                </div>
+            </div>
+            <div>${reportContentHtml}</div>
+            <div class="report-footer">
+                Отчет сгенерирован в системе учета рабочих дней и зарплаты
+            </div>
+            
+            <div class="no-print" style="margin-top: 30px; text-align: center;">
+                <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                    🖨️ Печать
+                </button>
+                <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                    ✕ Закрыть
+                </button>
+            </div>
+
+            <script>
+                // Автоматически открыть диалог печати
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            </script>
+        </body>
+        </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>${reportTitleText}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                    th { background-color: #f5f5f5; }
-                    .month-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-                    .stat-item { text-align: center; margin-bottom: 10px; }
-                    @media print {
-                        button { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${tempDiv.innerHTML}
-                <script>
-                    // Автоматическая печать и закрытие
-                    window.onload = function() {
-                        window.print();
-                        // Не закрываем автоматически - пусть пользователь сам решит
-                    };
-                </script>
-            </body>
-        </html>
-    `);
+    const printWindow = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes');
+    printWindow.document.write(printHtml);
     printWindow.document.close();
 
-    // Фокус остается в основном окне
-    window.focus();
+    // Фокус на новом окне
+    printWindow.focus();
 }
 
 // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
@@ -851,9 +1219,19 @@ workdayForm.addEventListener('submit', async (e) => {
 salaryPaymentForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = new FormData(salaryPaymentForm);
+
+    // Получаем дату из формы
+    const paymentDate = data.get('paymentDate');
+
+    if (!paymentDate) {
+        showMessage('Выберите дату выплаты!', 'error');
+        return;
+    }
+
     await addSalaryPayment({
         amount: parseFloat(data.get('amount')),
-        description: data.get('paymentDescription')
+        description: data.get('paymentDescription'),
+        paymentDate: paymentDate
     });
 });
 
@@ -866,13 +1244,21 @@ tabs.forEach(tab => {
         tabContents.forEach(c => c.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.getAttribute('data-tab') + 'Tab').classList.add('active');
+
+        // При переключении на вкладку выплат обновляем общую сумму
+        if (tab.getAttribute('data-tab') === 'payments') {
+            displayTotalAllPayments();
+        }
     });
 });
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
-    document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+    // Установка текущей даты по умолчанию для обеих форм
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('workDate').value = today;
+    document.getElementById('paymentDate').value = today;
 });
 
 // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
@@ -880,3 +1266,5 @@ window.deleteWorkday = deleteWorkday;
 window.deletePayment = deletePayment;
 window.logout = logout;
 window.toggleWorkdaysList = toggleWorkdaysList;
+window.togglePaymentsList = togglePaymentsList;
+window.loadTotalAllPayments = loadTotalAllPayments;
