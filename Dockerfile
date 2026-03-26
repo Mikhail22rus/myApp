@@ -7,7 +7,8 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
-EXPOSE $PORT
+# Диагностика: выводим переменные окружения
+RUN echo "=== Environment variables ===" && env | grep SPRING
 
-# Запускаем с подстановкой порта из окружения
-CMD ["sh", "-c", "java -Dserver.port=$PORT -jar app.jar"]
+EXPOSE $PORT
+CMD ["sh", "-c", "echo '=== SPRING_DATASOURCE_URL=' $SPRING_DATASOURCE_URL && java -Dserver.port=$PORT -jar app.jar"]
