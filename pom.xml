@@ -23,6 +23,7 @@
             <skipTests>true</skipTests>
 
         <java.version>17</java.version>
+             <hibernate.version>6.4.0.Final</hibernate.version>
     </properties>
 
     <dependencies>
@@ -40,7 +41,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.6.0</version>
+            <version>42.7.3</version>
         </dependency>
 
         <dependency>
