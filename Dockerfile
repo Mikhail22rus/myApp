@@ -7,8 +7,13 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
-# Диагностика: выводим переменные окружения
-RUN echo "=== Environment variables ===" && env | grep SPRING
+# Установка утилит для диагностики
+RUN apt-get update && apt-get install -y dnsutils curl
+
+# Диагностика DNS
+RUN echo "=== Testing DNS resolution ===" && \
+    nslookup eclwbktyxozelrclshlz.supabase.co && \
+    ping -c 1 eclwbktyxozelrclshlz.supabase.co || echo "Ping failed"
 
 EXPOSE $PORT
-CMD ["sh", "-c", "echo '=== SPRING_DATASOURCE_URL=' $SPRING_DATASOURCE_URL && java -Dserver.port=$PORT -jar app.jar"]
+CMD ["sh", "-c", "java -Dserver.port=$PORT -jar app.jar"]
