@@ -7,10 +7,8 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
-# Явно передаем переменные БД
-ENV SPRING_DATASOURCE_URL=jdbc:postgresql://eclwbktyxozelrclshlz.supabase.co:5432/postgres
-ENV SPRING_DATASOURCE_USERNAME=postgres
-ENV SPRING_DATASOURCE_PASSWORD=CABbAvy4QVYL9BUX
+# Убираем жёсткие значения — они будут переданы через переменные окружения в Render
+# ENV строки УДАЛЯЕМ!
 
 EXPOSE $PORT
 CMD ["java", "-jar", "app.jar"]
