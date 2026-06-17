@@ -1,5 +1,5 @@
 const API_BASE_URL = '/api';
-const DEFAULT_SALARY = 3500;
+const DEFAULT_SALARY = 4000;
 let currentUser = null;
 
 // Элементы DOM
