@@ -28,7 +28,7 @@ public class WorkDayService {
     @Autowired
     private WorkDayReposytory workDayRepository;
 
-    private static final BigDecimal DEFAULT_SALARY = new BigDecimal("3500.00");
+    private static final BigDecimal DEFAULT_SALARY = new BigDecimal("4000.00");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     // ========== РАБОЧИЕ ДНИ ==========
